@@ -1,0 +1,1681 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>여행노트</title>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f2f5f1;
+      color: #182a25;
+      font: 16px system-ui, sans-serif;
+    }
+
+    main { max-width: 840px; margin: auto; padding: 24px 18px; }
+    .top-bar, .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    button {
+      min-height: 44px;
+      padding: 10px 15px;
+      border: 1px solid #dce6de;
+      border-radius: 12px;
+      background: white;
+      color: inherit;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .primary { background: #175843; color: white; border-color: transparent; }
+    .hero {
+      margin: 16px 0 26px;
+      padding: 28px;
+      border-radius: 22px;
+      background: #173e32;
+      color: white;
+    }
+
+    .hero h1 { margin: 0 0 8px; }
+    .hero p, .card p { margin: 0; }
+    #trip-list { display: grid; gap: 12px; }
+    .card {
+      padding: 18px;
+      border: 1px solid #dce6de;
+      border-radius: 16px;
+      background: white;
+    }
+
+    .card h3 { margin: 0 0 8px; }
+    .card p, #empty { color: #52665d; }
+    dialog {
+      width: min(440px, calc(100% - 28px));
+      max-height: 90vh;
+      padding: 22px;
+      border: 0;
+      border-radius: 20px;
+      color: inherit;
+    }
+
+    dialog::backdrop { background: #102c2480; }
+    dialog h2 { margin-top: 0; }
+    label { display: block; margin-top: 14px; }
+    input, select {
+      display: block;
+      width: 100%;
+      min-height: 44px;
+      margin-top: 6px;
+      padding: 8px 10px;
+      border: 1px solid #c5d5cb;
+      border-radius: 9px;
+      background: white;
+      color: inherit;
+      font: inherit;
+    }
+
+    .actions { justify-content: flex-end; margin-top: 20px; }
+    #other-field[hidden] { display: none; }
+    [hidden] { display: none !important; }
+
+.card { position: relative; padding-right: 64px; }
+.card-menu { position: absolute; top: 12px; right: 12px; }
+
+.card-menu summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  list-style: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.card-menu summary::-webkit-details-marker { display: none; }
+/* 마우스를 올릴 수 있는 기기에서만 */
+@media (hover: hover) and (pointer: fine) {
+  button:hover {
+    filter: brightness(0.94);
+  }
+
+  .card-menu summary:hover {
+    background: #eaf2ec;
+  }
+}
+
+/* 클릭하거나 터치로 누르는 순간 */
+button:active,
+.card-menu summary:active {
+  transform: scale(0.97);
+  filter: brightness(0.88);
+}
+
+.card-menu summary:active {
+  background: #dce9df;
+}
+
+.card-menu button {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  z-index: 1;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px #182a2520;
+}
+
+
+.list-menu { position: relative; top: auto; right: auto; }
+
+.trip-title {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+/* 제목 버튼의 터치 범위를 카드 전체로 넓혀 */
+.trip-title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+/* 카드의 ⋮ 메뉴는 터치 영역 위에 둬 */
+.card > .card-menu {
+  z-index: 2;
+}
+.trip-title:hover,
+.trip-title:active {
+  filter: none;
+  transform: none;
+}
+
+
+.detail-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-tabs [aria-pressed="true"] {
+  background: #175843;
+  color: white;
+}
+
+#detail-content .card {
+  margin-bottom: 10px;
+  padding-right: 18px;
+}
+
+#detail-content textarea {
+  width: 100%;
+  min-height: 76px;
+  margin: 6px 0;
+  padding: 10px;
+  border: 1px solid #c5d5cb;
+  border-radius: 9px;
+  font: inherit;
+}
+
+#detail-content .check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+#detail-content .check-row input {
+  width: 22px;
+  min-height: 22px;
+  margin: 0;
+}
+
+.check-row input:checked + span {
+  text-decoration: line-through;
+}
+
+.day-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.day-heading small { color: #52665d; }
+.day-heading h3 { margin: 2px 0 0; }
+.day-summary { overflow-wrap: anywhere; }
+.day-summary strong { display: block; margin-top: 10px; }
+.day-summary p { margin-top: 10px; white-space: pre-wrap; }
+
+.day-summary strong + p {
+  padding-top: 10px;
+  border-top: 1px solid #dce6de;
+}
+
+    .card-menu .trip-actions { position: absolute; top: 46px; right: 0; z-index: 3; display: grid; gap: 5px; padding: 5px; background: white; border-radius: 12px; box-shadow: 0 4px 14px #182a2520; }
+    .card-menu .trip-actions button { position: static; box-shadow: none; }
+    .pay-people { margin: 12px 0; border: 1px solid #dce6de; border-radius: 10px; }
+    .pay-people label { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .pay-people input { width: 20px; min-height: 20px; margin: 0; accent-color: #175843; }
+    #edit-trip { margin-top: 14px; background: #ffffff14; color: white; border-color: #ffffff70; }
+    #delete-trip { margin-right: auto; color: #a92d2d; background: #fff0ee; }
+    #confirm-trip-delete { color: #a92d2d; background: #fff0ee; }
+    #confirm-trip-delete:disabled { opacity: .45; cursor: default; }
+    #trip-delete-confirm label { display: flex; gap: 10px; align-items: center; }
+    #trip-delete-confirm input { width: 20px; min-height: 20px; margin: 0; flex: none; accent-color: #a92d2d; }
+    #trip-delete-error { color: #a92d2d; }
+    #trip-delete-error:empty { display: none; }
+    #trip-form-error { color: #a92d2d; }
+    #trip-form-error:empty { display: none; }
+    #detail-content .packing-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; }
+    #detail-content .packing-item .check-row { flex: 1; min-width: 0; margin: 0; min-height: 44px; cursor: pointer; }
+    #detail-content .packing-item input { flex: none; accent-color: #175843; }
+    .packing-item span { overflow-wrap: anywhere; }
+    .packing-item input:checked + span { color: #52665d; }
+    .packing-remove { min-width: 44px; padding: 0; color: #a92d2d; background: #fff0ee; border-color: #f2d8d5; font-size: 22px; }
+  #detail-content form:has(input[aria-label="새 준비물"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#detail-content input[aria-label="새 준비물"] {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+#detail-content form:has(input[aria-label="새 준비물"]) button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+</style>
+</head>
+
+<body>
+  <main>
+    <header class="top-bar">
+      <strong>여행노트</strong>
+      <button class="primary" id="open-trip">+ 새 여행</button>
+    </header>
+
+    <section class="hero">
+      <h1>나의 여행</h1>
+      <p>다음에 떠날 곳과 다녀온 여행을 한곳에.</p>
+    </section>
+
+    <div class="top-bar">
+  <h2 id="list-title">여행 목록</h2>
+  <details class="card-menu list-menu" id="list-options" hidden>
+  <summary aria-label="여행 목록 옵션">⋮</summary>
+  <button type="button" id="toggle-hidden">🔒</button>
+</details>
+</div>
+    <p id="empty">아직 여행이 없어요. 첫 여행을 만들어보세요.</p>
+    <div id="trip-list"></div>
+  </main>
+
+<main id="trip-detail" hidden>
+  <button type="button" id="back-to-list">여행 목록으로</button>
+
+  <section class="hero">
+    <h1 id="detail-title"></h1>
+    <p id="detail-meta"></p>
+    <button type="button" id="edit-trip">여행 정보 수정</button>
+  </section>
+
+  <div class="detail-tabs" aria-label="여행 상세 메뉴">
+    <button type="button" data-tab="days">일정</button>
+    <button type="button" data-tab="bookings">예약</button>
+    <button type="button" data-tab="packing">짐 목록</button>
+    <button type="button" data-tab="shopping">살 것</button>
+  </div>
+
+  <section id="detail-content"></section>
+</main>
+
+  <dialog id="new-trip">
+    <form id="trip-form">
+      <h2>새 여행</h2>
+
+      <label>여행 이름
+        <input name="tripName" placeholder="나홀로 한여름의 크리스마스" required>
+      </label>
+
+      <label>여행지
+        <select name="destination" required>
+          <option value="">선택</option>
+          <option value="KRW">한국</option>
+          <option value="USD">미국</option>
+          <option value="JPY">일본</option>
+          <option value="AUD">호주</option>
+          <option value="CNY">중국</option>
+          <option value="EUR">유럽(유로 사용 지역)</option>
+          <option value="PHP">필리핀</option>
+          <option value="VND">베트남</option>
+          <option value="TWD">대만</option>
+          <option value="SGD">싱가포르</option>
+          <option value="other">기타</option>
+        </select>
+      </label>
+
+      <label id="other-field" hidden>여행지 직접 입력
+        <input name="otherDestination" placeholder="예: 캐나다">
+      </label>
+
+      <label id="other-currency-field" hidden>현지 통화
+        <select name="otherCurrency"></select>
+      </label>
+
+      <label>지역
+        <input name="region" placeholder="제주">
+      </label>
+
+      <p>사용 통화 <strong id="currency">—</strong></p>
+
+      <label>동행자
+        <input name="companions" placeholder="예: 친구 A, 친구 B">
+        <small>이름을 쉼표로 구분해요.</small>
+      </label>
+
+      <label>출발일 <input type="date" name="start" required></label>
+      <label>돌아오는 날 <input type="date" name="end" required></label>
+
+      <p id="trip-form-error" role="alert"></p>
+      <div class="actions">
+        <button type="button" id="delete-trip" hidden>삭제</button>
+        <button type="button" id="close-trip">닫기</button>
+        <button class="primary" type="submit">저장</button>
+      </div>
+    </form>
+  </dialog>
+<dialog id="pin-dialog">
+  <form id="pin-form">
+    <h2 id="pin-title">숨긴 여행 잠금 해제</h2>
+    <label>PIN 4자리
+      <input id="pin-input" type="password" inputmode="numeric"
+             pattern="[0-9]{4}" maxlength="4" required>
+    </label>
+    <p id="pin-error" role="alert"></p>
+    <div class="actions">
+      <button type="button" id="pin-cancel">닫기</button>
+      <button class="primary" type="submit" id="pin-submit">열기</button>
+    </div>
+  </form>
+</dialog>
+  <dialog id="trip-delete-confirm" aria-labelledby="trip-delete-title">
+    <h2 id="trip-delete-title">여행 삭제</h2>
+    <p id="trip-delete-name"></p>
+    <p>이 여행의 예약·결제·메모·체크리스트도 함께 삭제돼요.</p>
+    <label><input type="checkbox" id="acknowledge-trip-delete"> 함께 지워지는 기록을 확인했어요.</label>
+    <p id="trip-delete-error" role="alert"></p>
+    <div class="actions">
+      <button type="button" id="cancel-trip-delete" autofocus>취소</button>
+      <button type="button" id="confirm-trip-delete" disabled>삭제</button>
+    </div>
+  </dialog>
+  <script>
+    const dialog = document.getElementById('new-trip');
+    const form = document.getElementById('trip-form');
+    const list = document.getElementById('trip-list');
+    const currency = document.getElementById('currency');
+    const { destination, otherDestination, start, end } = form.elements;
+    const storageKey = 'my-travel-notebook';
+    const trips = JSON.parse(localStorage.getItem(storageKey) || '[]');
+let showHidden = false;
+    let tripDraft = null;
+    let editingTrip = null;
+    const tripFormError = document.getElementById('trip-form-error');
+    const deleteTripButton = document.getElementById('delete-trip');
+    const otherCurrency = form.elements.otherCurrency;
+    const supportedCurrencies = typeof Intl.supportedValuesOf === 'function'
+      ? Intl.supportedValuesOf('currency')
+      : ['AUD', 'CAD', 'CHF', 'CNY', 'EUR', 'GBP', 'HKD', 'JPY', 'KRW', 'NZD', 'PHP', 'SGD', 'THB', 'TWD', 'USD', 'VND'];
+    const currencyNames = new Intl.DisplayNames(['ko'], { type: 'currency' });
+    otherCurrency.add(new Option('통화 선택', ''));
+    supportedCurrencies.forEach(code =>
+      otherCurrency.add(new Option(code + ' · ' + currencyNames.of(code), code))
+    );
+
+    function peopleFrom(text) {
+      return [...new Set(text.split(',').map(name => name.trim()).filter(Boolean))];
+    }
+
+    function tripPeople(trip) {
+      return [...new Set(['나', ...(trip.companions || [])])];
+    }
+
+    function openTripForm(source = null, edit = false) {
+      editingTrip = edit ? source : null;
+      tripDraft = edit ? null : source;
+      deleteTripButton.hidden = !edit;
+      tripFormError.textContent = '';
+      form.reset();
+      end.min = '';
+      form.querySelector('h2').textContent = edit ? '여행 정보 수정' : source ? '여행 복제' : '새 여행';
+      if (source) {
+        form.elements.tripName.value = source.name;
+        form.elements.region.value = source.region || '';
+        form.elements.companions.value = (source.companions || []).join(', ');
+        const known = [...destination.options].find(option =>
+          option.value && option.value !== 'other' &&
+          option.textContent.trim() === source.country
+        );
+        destination.value = known ? known.value : 'other';
+        otherDestination.value = known ? '' : source.country || '';
+        otherCurrency.value = source.currency || '';
+        if (edit) {
+          start.value = source.start || '';
+          end.value = source.end || '';
+          end.min = start.value;
+        }
+      }
+      updateDestination();
+      dialog.showModal();
+    }
+
+    const dateFormat = new Intl.DateTimeFormat('ko-KR', {
+      month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'UTC'
+    });
+
+    function updateDestination() {
+      const other = destination.value === 'other';
+      document.getElementById('other-field').hidden = !other;
+      otherDestination.required = other;
+      document.getElementById('other-currency-field').hidden = !other;
+      otherCurrency.required = other;
+      currency.textContent = (other ? otherCurrency.value : destination.value) || '—';
+    }
+
+    function addTripCard(trip) {
+      const card = document.createElement('article');
+      const title = document.createElement('h3');
+      const place = document.createElement('p');
+      card.className = 'card';
+      const openButton = document.createElement('button');
+openButton.type = 'button';
+openButton.className = 'trip-title';
+openButton.textContent = trip.name;
+openButton.addEventListener('click', () => openTripDetail(trip));
+title.replaceChildren(openButton);
+      place.textContent = [trip.country, trip.region, trip.currency].filter(Boolean).join(' · ');
+      card.append(title, place);
+
+      if (trip.start && trip.end) {
+        const dates = document.createElement('p');
+        const nights = (Date.parse(trip.end) - Date.parse(trip.start)) / 86400000;
+        const duration = nights === 0 ? '당일' : nights + '박 ' + (nights + 1) + '일';
+        dates.textContent = dateFormat.format(new Date(trip.start)) + ' ~ ' +
+          dateFormat.format(new Date(trip.end)) + ' · ' + duration;
+        card.append(dates);
+      }
+
+      const menu = document.createElement('details');
+menu.className = 'card-menu';
+
+const dots = document.createElement('summary');
+dots.textContent = '⋮';
+dots.setAttribute('aria-label', trip.name + ' 옵션');
+
+const action = document.createElement('button');
+action.type = 'button';
+action.textContent = trip.hidden ? '🔓' : '🔒';
+
+action.addEventListener('click', () => {
+  trip.hidden = !trip.hidden;
+  localStorage.setItem(storageKey, JSON.stringify(trips));
+  renderTripList();
+});
+
+const duplicate = document.createElement('button');
+duplicate.type = 'button';
+duplicate.textContent = '여행 복제';
+duplicate.addEventListener('click', () => {
+  menu.open = false;
+  openTripForm(trip);
+});
+action.setAttribute('aria-label', trip.hidden ? '숨기기 해제' : '숨기기');
+const tripActions = document.createElement('div');
+tripActions.className = 'trip-actions';
+tripActions.append(duplicate, action);
+menu.append(dots, tripActions);
+card.append(menu);
+list.append(card);
+    }
+
+    document.getElementById('open-trip').onclick = () => openTripForm();
+    document.getElementById('close-trip').onclick = () => dialog.close();
+    destination.addEventListener('change', updateDestination);
+    otherCurrency.addEventListener('change', updateDestination);
+    start.addEventListener('change', () => { end.min = start.value; });
+
+    document.getElementById('edit-trip').addEventListener('click', () => {
+      openTripForm(selectedTrip, true);
+    });
+
+    const deleteDialog = document.getElementById('trip-delete-confirm');
+    const deleteAck = document.getElementById('acknowledge-trip-delete');
+    const confirmDelete = document.getElementById('confirm-trip-delete');
+    const deleteError = document.getElementById('trip-delete-error');
+
+    deleteTripButton.addEventListener('click', () => {
+      if (!editingTrip) return;
+      document.getElementById('trip-delete-name').textContent = '‘' + editingTrip.name + '’을 삭제할까요?';
+      deleteAck.checked = false;
+      confirmDelete.disabled = true;
+      deleteError.textContent = '';
+      deleteDialog.showModal();
+    });
+
+    deleteAck.addEventListener('change', () => {
+      confirmDelete.disabled = !deleteAck.checked;
+    });
+
+    document.getElementById('cancel-trip-delete').addEventListener('click', () => {
+      deleteDialog.close();
+    });
+
+    confirmDelete.addEventListener('click', () => {
+      const trip = editingTrip;
+      if (!trip || !deleteAck.checked) return;
+      const index = trips.indexOf(trip);
+      if (index < 0) return;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(trips.filter(item => item !== trip)));
+      } catch {
+        deleteError.textContent = '브라우저에 변경 사항을 저장할 수 없어요.';
+        return;
+      }
+      trips.splice(index, 1);
+      selectedTrip = null;
+      editingTrip = null;
+      showHidden = false;
+      deleteDialog.close();
+      dialog.close();
+      renderTripList();
+      document.getElementById('back-to-list').click();
+    });
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      tripFormError.textContent = '';
+      const name = form.elements.tripName.value.trim();
+      const other = destination.value === 'other';
+      const country = other ? otherDestination.value.trim() :
+        destination.selectedOptions[0].textContent;
+
+      if (!name || !country || end.value < start.value) {
+        tripFormError.textContent = '여행 이름, 여행지와 날짜를 확인해 주세요.';
+        return;
+      }
+
+      const trip = {
+        name,
+        country,
+        region: form.elements.region.value.trim(),
+        currency: other ? otherCurrency.value : destination.value,
+        companions: peopleFrom(form.elements.companions.value).filter(person => person !== '나'),
+        start: start.value,
+        end: end.value
+      };
+
+      if (editingTrip) {
+        const target = editingTrip;
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(trips.map(item =>
+            item === target ? { ...item, ...trip } : item
+          )));
+        } catch {
+          tripFormError.textContent = '브라우저에 변경 사항을 저장할 수 없어요.';
+          return;
+        }
+        Object.assign(target, trip);
+        editingTrip = null;
+        dialog.close();
+        renderTripList();
+        updateTripHeader(target);
+        renderTripDetail();
+        return;
+      }
+
+      if (tripDraft) {
+        if (Array.isArray(tripDraft.packing)) {
+          trip.packing = tripDraft.packing.map(item => ({ ...item, done: false }));
+        }
+        trip.shopping = (tripDraft.shopping || []).map(item => ({ ...item, done: false }));
+      }
+
+      localStorage.setItem(storageKey, JSON.stringify([...trips, trip]));
+      trips.push(trip);
+      showHidden = false;
+      renderTripList();
+      form.reset();
+      end.min = '';
+      updateDestination();
+      dialog.close();
+    });
+
+    function renderTripList() {
+  const hiddenCount = trips.filter(trip => trip.hidden).length;
+  if (hiddenCount === 0) showHidden = false;
+
+  const visibleTrips = trips.filter(trip => Boolean(trip.hidden) === showHidden);
+  list.replaceChildren();
+  visibleTrips.forEach(addTripCard);
+
+  const empty = document.getElementById('empty');
+  empty.hidden = visibleTrips.length > 0;
+  empty.textContent = trips.length
+    ? '표시할 여행이 없어요.'
+    : '아직 여행이 없어요. 첫 여행을 만들어보세요.';
+
+  document.getElementById('list-title').textContent =
+    showHidden ? '🔒' : '여행 목록';
+
+  const toggle = document.getElementById('toggle-hidden');
+const options = document.getElementById('list-options');
+
+options.hidden = hiddenCount === 0;
+options.open = false;
+toggle.textContent = showHidden ? '여행 목록으로' : '🔑';
+}
+
+const pinKey = 'my-travel-notebook-hidden-pin';
+const pinDialog = document.getElementById('pin-dialog');
+const pinForm = document.getElementById('pin-form');
+const pinInput = document.getElementById('pin-input');
+const pinError = document.getElementById('pin-error');
+
+document.getElementById('toggle-hidden').addEventListener('click', () => {
+  if (showHidden) {
+    showHidden = false;
+    renderTripList();
+    return;
+  }
+
+  const hasPin = localStorage.getItem(pinKey) !== null;
+  document.getElementById('list-options').open = false;
+  document.getElementById('pin-title').textContent =
+    hasPin ? '숨긴 여행 잠금 해제' : '숨긴 여행 PIN 설정';
+  document.getElementById('pin-submit').textContent =
+    hasPin ? '열기' : '설정하고 열기';
+
+  pinForm.reset();
+  pinError.textContent = '';
+  pinDialog.showModal();
+  pinInput.focus();
+});
+
+document.getElementById('pin-cancel').addEventListener('click', () => {
+  pinDialog.close();
+});
+
+pinForm.addEventListener('submit', event => {
+  event.preventDefault();
+
+  const savedPin = localStorage.getItem(pinKey);
+  const enteredPin = pinInput.value;
+
+  if (savedPin !== null && enteredPin !== savedPin) {
+    pinError.textContent = 'PIN이 맞지 않아요.';
+    pinInput.select();
+    return;
+  }
+
+  if (savedPin === null) {
+    localStorage.setItem(pinKey, enteredPin);
+  }
+
+  pinForm.reset();
+  pinDialog.close();
+  showHidden = true;
+  renderTripList();
+});
+
+
+renderTripList();
+document.addEventListener('click', event => {
+  document.querySelectorAll('.card-menu[open]').forEach(menu => {
+    if (!menu.contains(event.target)) {
+      menu.open = false;
+    }
+  });
+});
+
+const detailPage = document.getElementById('trip-detail');
+const listPage = document.querySelector('main');
+const detailContent = document.getElementById('detail-content');
+let selectedTrip = null;
+let detailTab = 'days';
+
+function saveTripDetails() {
+  localStorage.setItem(storageKey, JSON.stringify(trips));
+}
+
+function openTripDetail(trip) {
+  selectedTrip = trip;
+  detailTab = 'days';
+
+  // 기존 여행은 상세 기록이 없으니, 처음 열 때 빈 칸을 준비해.
+  trip.notes ??= {};
+  trip.bookings ??= [];
+  trip.shopping ??= [];
+  trip.packing ??= [
+    trip.currency === 'KRW' ? '신분증' : '여권',
+    '충전기', '보조배터리', '여벌 옷'
+  ].map(name => ({ name, done: false }));
+
+  updateTripHeader(trip);
+  listPage.hidden = true;
+  detailPage.hidden = false;
+  renderTripDetail();
+  window.scrollTo(0, 0);
+}
+
+function updateTripHeader(trip) {
+  document.getElementById('detail-title').textContent = trip.name;
+  const dates = trip.start && trip.end
+    ? dateFormat.format(new Date(trip.start)) + ' ~ ' + dateFormat.format(new Date(trip.end))
+    : '';
+  document.getElementById('detail-meta').textContent =
+    [trip.country, trip.region, trip.currency, dates].filter(Boolean).join(' · ');
+}
+
+document.getElementById('back-to-list').addEventListener('click', () => {
+  detailPage.hidden = true;
+  listPage.hidden = false;
+  window.scrollTo(0, 0);
+});
+
+detailPage.querySelectorAll('[data-tab]').forEach(button => {
+  button.addEventListener('click', () => {
+    detailTab = button.dataset.tab;
+    renderTripDetail();
+  });
+});
+
+function detailCard(title) {
+  const card = document.createElement('article');
+  card.className = 'card';
+  const heading = document.createElement('h3');
+  heading.textContent = title;
+  card.append(heading);
+  detailContent.append(card);
+  return card;
+}
+
+function renderTripDetail() {
+  detailContent.replaceChildren();
+  detailPage.querySelectorAll('[data-tab]').forEach(button => {
+    button.setAttribute('aria-pressed', button.dataset.tab === detailTab);
+  });
+
+  const trip = selectedTrip;
+
+  if (detailTab === 'days') {
+    if (!trip.start || !trip.end) {
+      detailCard('이 여행에는 아직 출발일과 돌아오는 날이 없어요.');
+      return;
+    }
+
+    const first = Date.parse(trip.start);
+    const last = Date.parse(trip.end);
+
+    for (let time = first; time <= last; time += 86400000) {
+      const date = new Date(time);
+      const day = date.toISOString().slice(0, 10);
+      const card = detailCard(dateFormat.format(date));
+
+      for (const booking of trip.bookings.filter(item => item.date === day)) {
+        const row = document.createElement('p');
+        row.textContent = [booking.time, booking.type, booking.name].filter(Boolean).join(' · ');
+        card.append(row);
+      }
+
+      const saved = trip.notes[day];
+const entry = typeof saved === 'string'
+  ? { area: '', memo: saved }
+  : saved || { area: '', memo: '' };
+
+const header = document.createElement('div');
+header.className = 'day-heading';
+
+const heading = card.querySelector('h3');
+const dateBlock = document.createElement('div');
+const dayNumber = document.createElement('small');
+dayNumber.textContent = `${Math.round((time - first) / 86400000) + 1}일차`;
+heading.textContent = date.toLocaleDateString('ko-KR', {
+  month: 'long', day: 'numeric', weekday: 'short', timeZone: 'UTC'
+});
+dateBlock.append(dayNumber, heading);
+
+const edit = document.createElement('button');
+edit.type = 'button';
+edit.textContent = '메모';
+edit.setAttribute('aria-expanded', 'false');
+header.append(dateBlock, edit);
+card.prepend(header);
+
+const summary = document.createElement('div');
+summary.className = 'day-summary';
+
+const form = document.createElement('form');
+form.hidden = true;
+form.innerHTML = `
+  <label>지역 <input name="area" placeholder="예: 시드니"></label>
+  <label>메모 <textarea name="memo" placeholder="간 곳이나 기억할 것"></textarea></label>
+  <div class="actions">
+    <button type="button" name="cancel">취소</button>
+    <button class="primary" type="submit">저장</button>
+  </div>
+`;
+
+function showNote() {
+  summary.replaceChildren();
+  if (entry.area) {
+    const area = document.createElement('strong');
+    area.textContent = entry.area;
+    summary.append(area);
+  }
+  if (entry.memo) {
+    const memo = document.createElement('p');
+    memo.textContent = entry.memo;
+    summary.append(memo);
+  }
+}
+
+function toggleNoteEditor(open) {
+  form.hidden = !open;
+  summary.hidden = open;
+  edit.setAttribute('aria-expanded', String(open));
+  edit.textContent = open ? '접기' : '메모';
+
+  if (open) {
+    form.elements.area.value = entry.area;
+    form.elements.memo.value = entry.memo;
+    form.elements.area.focus();
+  } else {
+    edit.focus();
+  }
+}
+
+edit.addEventListener('click', () => toggleNoteEditor(form.hidden));
+form.elements.cancel.addEventListener('click', () => toggleNoteEditor(false));
+
+form.addEventListener('submit', event => {
+  event.preventDefault();
+  entry.area = form.elements.area.value.trim();
+  entry.memo = form.elements.memo.value.trim();
+  trip.notes[day] = entry;
+  saveTripDetails();
+  showNote();
+  toggleNoteEditor(false);
+});
+
+showNote();
+card.append(summary, form);
+
+
+    }
+    return;
+  }
+
+  
+  if (detailTab === 'bookings') {
+  const groups = [
+    { label: '항공편', color: 'flight', types: ['가는 편', '오는 편'] },
+    { label: '숙소', color: 'stay', types: ['숙소'] },
+    { label: '예약', color: 'other', types: ['식당', '골프', '티켓', '기타'] }
+  ];
+
+  const dayMs = 86400000;
+  const first = Date.parse(trip.start);
+  const last = Date.parse(trip.end);
+  const hasDates = Number.isFinite(first) && Number.isFinite(last) && first <= last;
+  const pad = number => String(number).padStart(2, '0');
+  const dateKey = time => new Date(time).toISOString().slice(0, 10);
+  const dateText = value => value
+    ? dateFormat.format(new Date(value + 'T00:00:00Z'))
+    : '';
+
+  const now = new Date();
+  const today = [
+    now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate())
+  ].join('-');
+
+  const dates = [];
+  if (hasDates) {
+    for (let time = first; time <= last; time += dayMs) {
+      dates.push({
+        value: dateKey(time),
+        label: `${(time - first) / dayMs + 1}일차`
+      });
+    }
+  }
+
+  const flightDates = hasDates ? [
+    { value: dateKey(first - dayMs), label: '여행 전날' },
+    ...dates,
+    { value: dateKey(last + dayMs), label: '여행 다음 날' }
+  ] : [];
+
+  function flightUsesDate(date) {
+    return trip.bookings.some(booking =>
+      groupFor(booking.type).color === 'flight' &&
+      (booking.date === date || booking.arrivalDate === date)
+    );
+  }
+
+  let selectedDate = dates.some(date => date.value === today) ||
+    (flightDates.some(date => date.value === today) && flightUsesDate(today))
+    ? today : '';
+  let editorState = null;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .res-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .res-buttons button { padding-inline: 11px; }
+    .res-flight { background: #e3efff; color: #254977; }
+    .res-stay { background: #e4f2e8; color: #245b40; }
+    .res-other { background: #f1e8fa; color: #664079; }
+    .res-filters button { border-radius: 24px; }
+    .res-filters button[aria-pressed="true"] { background: #175843; color: white; }
+    .res-head, .res-copy { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .res-head { justify-content: space-between; }
+    .res-tag { display: inline-block; padding: 4px 9px; border-radius: 20px; font-size: .85rem; }
+    .res-panel p { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .res-panel h3 { margin: 7px 0; overflow-wrap: anywhere; }
+    .res-panel small { color: #52665d; }
+    .res-times { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+    .res-times details { position: relative; }
+    .res-times summary {
+      display: grid; place-items: center; min-height: 44px; min-width: 78px;
+      padding: 6px 12px; border: 1px solid #c5d5cb; border-radius: 12px;
+      background: white; cursor: pointer; list-style: none;
+    }
+    .res-times summary::-webkit-details-marker { display: none; }
+    .res-options {
+      position: absolute; z-index: 3; min-width: 108px; max-height: 220px;
+      overflow: auto; padding: 4px; background: white; border: 1px solid #dce6de;
+      border-radius: 12px; box-shadow: 0 4px 14px #182a2520;
+    }
+    .res-options button { display: block; width: 100%; border: 0; white-space: nowrap; }
+    .res-options button[aria-pressed="true"] { background: #e4f2e8; color: #245b40; }
+    .res-times input { width: 92px; margin: 0; }
+    .res-pay { margin-top: 14px; border: 1px solid #dce6de; border-radius: 12px; padding: 12px; }
+    .res-error, .res-delete { color: #a92d2d; }
+    .res-deadline { background: #fff5df; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  `;
+
+  const panel = document.createElement('section');
+  panel.className = 'res-panel';
+  detailContent.append(style, panel);
+
+  function element(tag, text = '', className = '') {
+    const item = document.createElement(tag);
+    item.textContent = text;
+    item.className = className;
+    return item;
+  }
+
+  function button(text, action, className = '') {
+    const item = element('button', text, className);
+    item.type = 'button';
+    item.addEventListener('click', action);
+    return item;
+  }
+
+  function groupFor(type) {
+    return groups.find(group => group.types.includes(type)) || groups[2];
+  }
+
+  function field(label, name, value = '', type = 'text', required = false) {
+    const wrapper = element('label', label);
+    const input = document.createElement(type === 'textarea' ? 'textarea' : 'input');
+    if (type !== 'textarea') input.type = type;
+    input.name = name;
+    input.value = value || '';
+    input.required = required;
+    wrapper.append(input);
+    return wrapper;
+  }
+
+  function selectField(label, name, options, value) {
+    const wrapper = element('label', label);
+    const select = document.createElement('select');
+    select.name = name;
+    options.forEach(([key, text]) => select.add(new Option(text, key)));
+    select.value = value ?? '';
+    wrapper.append(select);
+    return wrapper;
+  }
+
+  function dateField(label, name, options, value, required = true) {
+    if (!options.length) return field(label, name, value, 'date', required);
+
+    const choices = [['', '날짜 선택'], ...options.map(date => [
+      date.value, `${date.label} · ${dateText(date.value)}`
+    ])];
+
+    if (value && !options.some(date => date.value === value)) {
+      choices.push([value, `${dateText(value)} · 기존 날짜`]);
+    }
+
+    const wrapper = selectField(label, name, choices, value);
+    wrapper.querySelector('select').required = required;
+    return wrapper;
+  }
+
+  function timeField(label, saved) {
+    const [savedHour = '', savedMinute = ''] = (saved || '').split(':');
+    const minutes = Array.from({ length: 12 }, (_, index) => pad(index * 5));
+    let hour = savedHour;
+    let minute = savedMinute && !minutes.includes(savedMinute) ? 'direct' : savedMinute;
+
+    const wrapper = element('div');
+    wrapper.append(element('label', label));
+    const row = element('div', '', 'res-times');
+
+    function picker(label, choices, read, update) {
+      const menu = document.createElement('details');
+      const summary = element('summary');
+      summary.setAttribute('aria-label', label);
+      const options = element('div', '', 'res-options');
+
+      function refresh() {
+        const choice = choices.find(([value]) => value === read());
+        summary.textContent = `${choice?.[1] || label} ▾`;
+        Array.from(options.children).forEach((option, index) => {
+          option.setAttribute('aria-pressed', String(choices[index][0] === read()));
+        });
+      }
+
+      choices.forEach(([value, text]) => {
+        options.append(button(text, () => {
+          update(value);
+          refresh();
+          menu.open = false;
+        }));
+      });
+
+      menu.append(summary, options);
+      refresh();
+      return { menu, refresh };
+    }
+
+    const custom = document.createElement('input');
+    custom.type = 'text';
+    custom.inputMode = 'numeric';
+    custom.maxLength = 2;
+    custom.placeholder = '예: 42';
+    custom.setAttribute('aria-label', '분 직접 입력');
+    custom.value = minute === 'direct' ? savedMinute : '';
+
+    const hourPicker = picker('시', [
+      ['', '시간 없음'],
+      ...Array.from({ length: 24 }, (_, value) => [pad(value), `${pad(value)}시`])
+    ], () => hour, value => {
+      hour = value;
+      if (!hour) {
+        minute = '';
+        custom.value = '';
+      } else if (!minute) {
+        minute = '00';
+      }
+      refreshMinutes();
+    });
+
+    const minutePicker = picker('분', [
+      ...minutes.map(value => [value, `${value}분`]),
+      ['direct', '직접 입력']
+    ], () => minute, value => {
+      minute = value;
+      refreshMinutes();
+      if (value === 'direct') custom.focus();
+    });
+
+    function refreshMinutes() {
+      minutePicker.menu.hidden = !hour;
+      custom.hidden = !hour || minute !== 'direct';
+      minutePicker.refresh();
+    }
+
+    row.addEventListener('click', event => {
+      row.querySelectorAll('details[open]').forEach(menu => {
+        if (!menu.contains(event.target)) menu.open = false;
+      });
+    });
+
+    row.append(hourPicker.menu, minutePicker.menu, custom);
+    wrapper.append(row);
+    refreshMinutes();
+
+    return {
+      wrapper,
+      read() {
+        if (!hour) return '';
+        if (minute !== 'direct') return `${hour}:${minute}`;
+        const value = custom.value.trim();
+        if (!/^[0-9]{1,2}$/.test(value) || Number(value) > 59) {
+          throw new Error(`${label}의 분은 0~59로 입력해 주세요.`);
+        }
+        return `${hour}:${pad(value)}`;
+      }
+    };
+  }
+
+  function currencyDecimals(code) {
+    if (['KRW', 'JPY', 'VND'].includes(code)) return 0;
+    return Math.min(2, new Intl.NumberFormat('ko-KR', {
+      style: 'currency', currency: code
+    }).resolvedOptions().maximumFractionDigits);
+  }
+
+  function formatAmount(value) {
+    const match = value.replace(/,/g, '').match(/^([0-9]*)(\.[0-9]*)?$/);
+    if (!match) return value;
+    const whole = (match[1] || '0').replace(/^0+(?=\d)/, '');
+    return value === '' ? '' : whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (match[2] || '');
+  }
+
+  function paymentField(payment = {}) {
+    const box = element('fieldset', '', 'res-pay');
+    box.append(element('legend', '결제 내역'));
+
+    const amount = field('실제로 낸 금액', 'amount', payment.amount ? formatAmount(String(payment.amount)) : '', 'text', true);
+    const amountInput = amount.querySelector('input');
+    amountInput.inputMode = 'decimal';
+    amountInput.addEventListener('input', () => {
+      const raw = amountInput.value;
+      const offset = amountInput.selectionStart;
+      const significant = raw.slice(0, offset).replace(/,/g, '').length;
+      const formatted = formatAmount(raw);
+      if (formatted === raw) return;
+      amountInput.value = formatted;
+      let caret = 0;
+      let seen = 0;
+      while (caret < formatted.length && seen < significant) {
+        if (formatted[caret] !== ',') seen++;
+        caret++;
+      }
+      amountInput.setSelectionRange(caret, caret);
+    });
+
+    const defaultCurrency = trip.currency || 'KRW';
+    const currency = payment.currency || defaultCurrency;
+    const choices = [...new Set([defaultCurrency, 'KRW', 'USD', currency])]
+      .map(code => [code, code]);
+
+    const roster = tripPeople(trip);
+    const selected = new Set(payment.people || ['나']);
+    const members = [...new Set([...roster, ...selected, payment.payer || '나'])];
+    const people = element('fieldset', '', 'pay-people');
+    people.append(element('legend', '부담할 사람'));
+
+    function checkbox(caption, name, value) {
+      const wrap = element('label');
+      const control = document.createElement('input');
+      control.type = 'checkbox';
+      control.name = name;
+      control.value = value;
+      wrap.append(control, document.createTextNode(caption));
+      people.append(wrap);
+      return control;
+    }
+
+    const all = checkbox('전체', '', '');
+    const checks = members.map(person => {
+      const control = checkbox(person, 'people', person);
+      control.checked = selected.has(person);
+      return control;
+    });
+
+    function updateAll() {
+      const count = checks.filter(control => control.checked).length;
+      all.checked = count === checks.length;
+      all.indeterminate = count > 0 && count < checks.length;
+    }
+    all.addEventListener('change', () => {
+      checks.forEach(control => { control.checked = all.checked; });
+      updateAll();
+    });
+    checks.forEach(control => control.addEventListener('change', updateAll));
+    updateAll();
+
+    box.append(
+      field('결제 이름', 'label', payment.label),
+      amount,
+      selectField('통화', 'currency', choices, currency),
+      field('결제일', 'paidOn', payment.paidOn || today, 'date', true),
+      selectField('결제자', 'payer', members.map(person => [person, person]), payment.payer || '나'),
+      people,
+      button('이 결제 내역 빼기', () => box.remove(), 'res-delete')
+    );
+
+    return box;
+  }
+
+  function openEditor(group, existing = null, draft = null) {
+    editorState = { group, existing, draft };
+    draw();
+    const form = panel.querySelector('form');
+    form.scrollIntoView({ block: 'nearest' });
+  }
+
+  function renderEditor() {
+    const { group, existing, draft } = editorState;
+    const saved = existing || draft || {};
+    const stay = group.color === 'stay';
+    const flight = group.color === 'flight';
+    const options = flight ? flightDates : dates;
+    const defaultDate = options.some(date => date.value === selectedDate)
+      ? selectedDate : dates[0]?.value || '';
+
+    const form = element('form', '', 'card');
+    form.append(element('h3', `${group.label} ${existing ? '수정' : '추가'}`));
+    if (!stay) {
+      form.append(selectField('구분', 'type',
+        group.types.map(type => [type, type]), saved.type || group.types[0]));
+    }
+
+    const mainTime = timeField(
+      stay ? '체크인 시각' : flight ? '출발 시각' : '시간', saved.time
+    );
+    form.append(
+      field(stay ? '숙소 이름' : flight ? '편명' : '예약 이름',
+        'name', saved.name, 'text', true),
+      dateField(stay ? '체크인 날짜' : flight ? '출발 날짜' : '날짜',
+        'date', options, existing ? saved.date : defaultDate),
+      mainTime.wrapper
+    );
+
+    let endTime;
+    if (stay) {
+      endTime = timeField('체크아웃 시각', saved.checkoutTime);
+      form.append(
+        dateField('체크아웃 날짜', 'checkout', dates, saved.checkout),
+        endTime.wrapper,
+        field('무료취소 마감', 'deadline', saved.deadline, 'datetime-local')
+      );
+    }
+
+    if (flight) {
+      endTime = timeField('도착 시각', saved.arrivalTime);
+      form.append(
+        field('출발 공항', 'place', saved.place),
+        field('도착 공항', 'arrivalPlace', saved.arrivalPlace),
+        dateField('도착 날짜', 'arrivalDate', flightDates, saved.arrivalDate, false),
+        endTime.wrapper,
+        element('small', '출발과 도착은 각 공항의 현지 날짜와 시각으로 입력해요.')
+      );
+    } else {
+      form.append(field('장소 · 주소', 'place', saved.place));
+    }
+
+    form.append(
+      field('예약번호', 'code', saved.code),
+      field('예약 링크', 'link', saved.link, 'url'),
+      field('메모', 'memo', saved.memo, 'textarea')
+    );
+
+    const payments = element('div');
+    (saved.payments || []).forEach(payment => payments.append(paymentField(payment)));
+    form.append(
+      payments,
+      button('+ 결제 내역 추가', () => payments.append(paymentField())),
+      element('small', '예약금과 잔금처럼 따로 낸 돈은 결제 내역을 각각 추가하세요.')
+    );
+
+    const error = element('p', '', 'res-error');
+    error.setAttribute('role', 'alert');
+    const actions = element('div', '', 'actions');
+
+    if (existing) {
+      actions.append(button('삭제', () => {
+        const hasPayments = (existing.payments || []).length > 0;
+        const question = hasPayments
+          ? '예약과 이 예약에 저장한 결제 내역을 함께 삭제할까요?'
+          : '이 예약을 삭제할까요?';
+        if (!confirm(question)) return;
+
+        trip.bookings.splice(trip.bookings.indexOf(existing), 1);
+        saveTripDetails();
+        editorState = null;
+        draw();
+      }, 'res-delete'));
+    }
+
+    actions.append(button('닫기', () => {
+      editorState = null;
+      draw();
+    }));
+
+    const save = element('button', '저장', 'primary');
+    save.type = 'submit';
+    actions.append(save);
+    form.append(error, actions);
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+
+      try {
+        const value = name => form.elements.namedItem(name).value.trim();
+        const booking = {
+          type: stay ? '숙소' : value('type'),
+          name: value('name'),
+          date: value('date'),
+          time: mainTime.read(),
+          place: value('place'),
+          code: value('code'),
+          link: value('link'),
+          memo: value('memo')
+        };
+
+        if (!booking.name) throw new Error('예약 이름을 입력해 주세요.');
+
+        if (stay) {
+          booking.checkout = value('checkout');
+          booking.checkoutTime = endTime.read();
+          booking.deadline = value('deadline');
+          if (booking.checkout <= booking.date) {
+            throw new Error('체크아웃은 체크인 다음 날 이후로 골라 주세요.');
+          }
+        }
+
+        if (flight) {
+          booking.arrivalDate = value('arrivalDate');
+          booking.arrivalTime = endTime.read();
+          booking.arrivalPlace = value('arrivalPlace');
+          if (booking.arrivalTime && !booking.arrivalDate) {
+            throw new Error('도착 시각을 적었다면 도착 날짜도 골라 주세요.');
+          }
+        }
+
+        booking.payments = Array.from(payments.children, box => {
+          const read = name => box.querySelector('[name="' + name + '"]').value.trim();
+          const rawAmount = read('amount').replace(/,/g, '');
+          const amount = Number(rawAmount);
+          const payer = read('payer');
+          const people = Array.from(box.querySelectorAll('[name="people"]:checked'), control => control.value);
+          const currency = read('currency');
+          const decimals = currencyDecimals(currency);
+          const validAmount = /^\d+(?:\.\d+)?$/.test(rawAmount) &&
+            (rawAmount.split('.')[1]?.length || 0) <= decimals;
+          if (!validAmount || !Number.isFinite(amount) || amount <= 0 || amount > 100000000000) {
+            throw new Error(decimals
+              ? currency + ' 금액은 0보다 크게, 소수 ' + decimals + '자리까지 입력해 주세요.'
+              : currency + ' 금액은 0보다 큰 정수로 입력해 주세요.');
+          }
+          if (!payer || !people.length) {
+            throw new Error('결제자와 부담할 사람을 선택해 주세요.');
+          }
+
+          return {
+            label: read('label') || '결제',
+            amount,
+            currency,
+            paidOn: read('paidOn'),
+            payer,
+            people
+          };
+        });
+
+        if (existing) Object.assign(existing, booking);
+        else trip.bookings.push(booking);
+
+        saveTripDetails();
+        editorState = null;
+
+        if (selectedDate && !visibleOn(booking, selectedDate)) {
+          selectedDate = booking.date;
+        }
+        draw();
+      } catch (problem) {
+        error.textContent = problem.message;
+      }
+    });
+
+    panel.append(form);
+  }
+
+  function visibleOn(booking, date) {
+    if (!date) return true;
+    if (booking.type === '숙소' && booking.date && booking.checkout) {
+      return booking.date <= date && date <= booking.checkout;
+    }
+    return booking.date === date || booking.arrivalDate === date;
+  }
+
+  function timeOn(booking, date) {
+    if (date && booking.type === '숙소' && date === booking.checkout) {
+      return booking.checkoutTime || '';
+    }
+    if (!date || date === booking.date) return booking.time || '';
+    if (date === booking.arrivalDate) return booking.arrivalTime || '';
+    return '';
+  }
+
+  async function copyCode(code, control) {
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      const temporary = document.createElement('textarea');
+      temporary.value = code;
+      temporary.style.position = 'fixed';
+      temporary.style.opacity = '0';
+      document.body.append(temporary);
+      temporary.select();
+
+      let copied = false;
+      try {
+        copied = document.execCommand('copy');
+      } catch {
+        // 일부 브라우저는 파일에서 복사를 제한해.
+      } finally {
+        temporary.remove();
+      }
+
+      if (!copied) {
+        window.prompt('예약번호를 선택해 복사하세요.', code);
+        return;
+      }
+    }
+
+    control.textContent = '복사됨';
+    setTimeout(() => { control.textContent = '번호 복사'; }, 1500);
+  }
+
+  function renderCard(booking) {
+    const group = groupFor(booking.type);
+    const card = element('article', '', 'card');
+    const header = element('div', '', 'res-head');
+    const title = element('div');
+
+    title.append(
+      element('span', booking.type, `res-tag res-${group.color}`),
+      element('h3', booking.name)
+    );
+    const controls = element('div', '', 'res-copy');
+    controls.append(
+      button('수정', () => openEditor(group, booking)),
+      button('예약 복제', () => {
+        const draft = { ...booking, code: '', payments: [], checkout: '', arrivalDate: '' };
+        openEditor(group, null, draft);
+      })
+    );
+    header.append(title, controls);
+    card.append(header);
+
+    function line(...parts) {
+      const text = parts.filter(Boolean).join(' · ');
+      if (text) card.append(element('p', text));
+    }
+
+    if (group.color === 'flight') {
+      line('출발', dateText(booking.date), booking.time, booking.place);
+      if (booking.arrivalDate || booking.arrivalPlace) {
+        line('도착', dateText(booking.arrivalDate), booking.arrivalTime, booking.arrivalPlace);
+      }
+    } else if (booking.type === '숙소') {
+      if (selectedDate && booking.date < selectedDate && selectedDate < booking.checkout) {
+        line('묵는 숙소');
+      }
+      line('체크인', dateText(booking.date), booking.time);
+      if (booking.checkout) line('체크아웃', dateText(booking.checkout), booking.checkoutTime);
+      line(booking.place);
+      if (booking.deadline) line('무료취소 마감', booking.deadline.replace('T', ' '));
+    } else {
+      line(dateText(booking.date), booking.time, booking.place);
+    }
+
+    if (booking.code) {
+      const code = element('div', '', 'res-copy');
+      const copy = button('번호 복사', () => copyCode(booking.code, copy));
+      code.append(element('span', `예약번호 ${booking.code}`), copy);
+      card.append(code);
+    }
+
+    line(booking.memo);
+
+    if (/^https?:\/\//i.test(booking.link || '')) {
+      const link = element('a', '예약 링크 열기');
+      link.href = booking.link;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      card.append(link);
+    }
+
+    if (booking.payments?.length) {
+      const totals = new Map();
+      booking.payments.forEach(payment => {
+        totals.set(payment.currency, (totals.get(payment.currency) || 0) + payment.amount);
+      });
+
+      const paid = [...totals].map(([currency, amount]) =>
+        new Intl.NumberFormat('ko-KR', { style: 'currency', currency }).format(amount)
+      ).join(' · ');
+
+      const paymentLine = element('p');
+      paymentLine.append(element('small', `결제 ${paid}`));
+      card.append(paymentLine);
+    }
+
+    panel.append(card);
+  }
+
+  function draw() {
+    panel.replaceChildren();
+
+    const buttons = element('div', '', 'res-buttons');
+    groups.forEach(group => buttons.append(button(
+      `+ ${group.label}`, () => openEditor(group), `res-${group.color}`
+    )));
+    panel.append(buttons);
+
+    const currentTime = Date.now();
+    const soon = currentTime + 48 * 60 * 60 * 1000;
+    trip.bookings
+      .filter(booking => {
+        const deadline = Date.parse(booking.deadline);
+        return booking.type === '숙소' && deadline >= currentTime && deadline <= soon;
+      })
+      .sort((a, b) => a.deadline.localeCompare(b.deadline))
+      .forEach(booking => panel.append(element('p',
+        `${booking.name} · 무료취소 ${booking.deadline.replace('T', ' ')}까지`,
+        'res-deadline'
+      )));
+
+    if (dates.length) {
+      const filterDates = flightDates.filter(date =>
+        dates.includes(date) || flightUsesDate(date.value)
+      );
+
+      if (selectedDate && !filterDates.some(date => date.value === selectedDate)) {
+        selectedDate = '';
+      }
+
+      const filters = element('div', '', 'res-buttons res-filters');
+      filters.setAttribute('aria-label', '예약 날짜');
+
+      function addFilter(label, value) {
+        const control = button(label, () => {
+          selectedDate = value;
+          editorState = null;
+          draw();
+        });
+        control.setAttribute('aria-pressed', String(selectedDate === value));
+        filters.append(control);
+      }
+
+      addFilter('전체', '');
+      filterDates.forEach(date => {
+        addFilter(date.label + (date.value === today ? ' · 오늘' : ''), date.value);
+      });
+      panel.append(filters);
+      if (selectedDate) panel.append(element('h3', dateText(selectedDate)));
+    }
+
+    if (editorState) renderEditor();
+
+    const visible = trip.bookings.filter(booking => visibleOn(booking, selectedDate));
+    visible.sort((a, b) => {
+      const byDate = (selectedDate || a.date || '9999-12-31')
+        .localeCompare(selectedDate || b.date || '9999-12-31');
+      return byDate || timeOn(a, selectedDate).localeCompare(timeOn(b, selectedDate));
+    });
+
+    if (!visible.length) {
+      panel.append(element('p', selectedDate
+        ? '이날 등록된 예약이 없어요.'
+        : '등록된 예약이 없어요.'));
+    }
+    visible.forEach(renderCard);
+  }
+
+  draw();
+  return;
+}
+
+
+
+  const isPacking = detailTab === 'packing';
+  const items = isPacking ? trip.packing : trip.shopping;
+  const card = isPacking ? null : detailCard('여행에서 살 것');
+
+  for (const item of items) {
+    const label = document.createElement('label');
+    label.className = 'check-row';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = item.done;
+    const name = document.createElement('span');
+    name.textContent = item.name;
+    label.append(checkbox, name);
+
+    checkbox.addEventListener('change', () => {
+      item.done = checkbox.checked;
+      saveTripDetails();
+    });
+
+    if (!isPacking) {
+      card.append(label);
+      continue;
+    }
+
+    const row = document.createElement('article');
+    row.className = 'card packing-item';
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'packing-remove';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', item.name + ' 삭제');
+    remove.addEventListener('click', () => {
+      const remaining = items.filter(entry => entry !== item);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(trips.map(entry =>
+          entry === trip ? { ...entry, packing: remaining } : entry
+        )));
+      } catch {
+        window.alert('브라우저에 변경 사항을 저장할 수 없어요.');
+        return;
+      }
+      trip.packing = remaining;
+      renderTripDetail();
+    });
+    row.append(label, remove);
+    detailContent.append(row);
+  }
+
+  const form = document.createElement('form');
+  const input = document.createElement('input');
+  input.placeholder = isPacking ? '예: 선글라스' : '예: 친구 줄 초콜릿';
+  input.setAttribute('aria-label', isPacking ? '새 준비물' : '새로 살 것');
+  input.required = true;
+  const add = document.createElement('button');
+  add.textContent = '+';
+
+  form.append(input, add);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const name = input.value.trim();
+    if (!name) return;
+    items.push({ name, done: false });
+    saveTripDetails();
+    renderTripDetail();
+  });
+  const addCard = card || detailCard('준비물 추가');
+  addCard.append(form);
+}
+
+  </script>
+</body>
+</html>
