@@ -305,6 +305,12 @@ button:active,
   .expense-error, .expense-delete { color: #a92d2d; }
   .expense-delete { margin-right: auto; background: #fff0ee; }
   .expense-list-title { margin: 20px 0 12px; }
+  .expense-summary-row { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; }
+  .expense-summary-row + .expense-summary-row { border-top: 1px solid #dce6de; }
+  .expense-summary-row > span { min-width: 0; overflow-wrap: anywhere; }
+  .expense-summary-row > strong { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+  .expense-breakdown { margin-top: 10px; border-top: 1px solid #dce6de; }
+  .expense-breakdown > summary { min-height: 44px; padding: 11px 0; color: #52665d; cursor: pointer; }
 </style>
 </head>
 
@@ -2125,31 +2131,58 @@ function renderExpenses(trip) {
       return;
     }
 
-    totals.append(element('p', [...summary].map(([code, result]) => money(result.total, code)).join(' · '), 'expense-total'));
-    if (converted) totals.append(element('p', '원화 환산 · ' + money(converted.total, 'KRW')));
-    if (missing.length) totals.append(element('p', '원화로 합치려면 환율을 입력하세요 · ' + missing.join(', ')));
-
-    for (const person of people) {
-      const byCurrency = [...summary].map(([code, result]) =>
-        money((result.owed.get(person) || 0) / result.scale, code)
-      ).join(' · ');
-      shares.append(element('p', person + ' · ' + byCurrency));
-      if (converted) shares.append(element('small',
-        '원화 환산 ' + money(converted.owed.get(person) || 0, 'KRW')));
+    function breakdown(card, label) {
+      const details = element('details', '', 'expense-breakdown');
+      details.append(element('summary', label));
+      card.append(details);
+      return details;
     }
 
-    function showTransfers(lines) {
-      if (!lines.length) settlement.append(element('p', '서로 보낼 돈이 없어요.'));
-      lines.forEach(({ from, to, amount, code }) => settlement.append(element('p',
-        from + ' → ' + to + ' · ' + money(amount, code))));
+    function amountRow(parent, name, amount) {
+      const row = element('div', '', 'expense-summary-row');
+      row.append(element('span', name), element('strong', amount));
+      parent.append(row);
     }
-    settlement.append(element('small', '통화별 정산'));
-    showTransfers([...summary].flatMap(([code, result]) =>
-      result.transfers.map(line => ({ ...line, code }))
-    ));
+
+    const nativeTotal = [...summary].map(([code, result]) => money(result.total, code)).join(' + ');
+    totals.append(element('p', converted ? money(converted.total, 'KRW') : nativeTotal, 'expense-total'));
     if (converted) {
-      settlement.append(element('h4', '원화로 한 번에 정산할 때'));
-      showTransfers(converted.transfers.map(line => ({ ...line, code: 'KRW' })));
+      breakdown(totals, '통화별 내역 보기').append(element('p', nativeTotal));
+    }
+    if (missing.length) totals.append(element('small', '원화 환산에 필요한 환율 · ' + missing.join(', ')));
+
+    const nativeShares = converted ? element('div', '') : shares;
+    for (const person of people) {
+      const amounts = [...summary].flatMap(([code, result]) => {
+        const units = result.owed.get(person) || 0;
+        return units ? [money(units / result.scale, code)] : [];
+      });
+      amountRow(nativeShares, person, amounts.join(' + ') || '—');
+      if (converted) amountRow(shares, person, money(converted.owed.get(person) || 0, 'KRW'));
+    }
+    if (converted) breakdown(shares, '통화별 내역 보기').append(nativeShares);
+
+    function showTransfers(parent, lines) {
+      const grouped = new Map();
+      for (const { from, to, amount, code } of lines) {
+        const key = JSON.stringify([from, to]);
+        if (!grouped.has(key)) grouped.set(key, { from, to, amounts: [] });
+        grouped.get(key).amounts.push(money(amount, code));
+      }
+      if (!grouped.size) parent.append(element('p', '서로 보낼 돈이 없어요.'));
+      for (const { from, to, amounts } of grouped.values()) {
+        amountRow(parent, from + ' → ' + to, amounts.join(' + '));
+      }
+    }
+
+    const nativeTransfers = [...summary].flatMap(([code, result]) =>
+      result.transfers.map(line => ({ ...line, code }))
+    );
+    if (converted) {
+      showTransfers(settlement, converted.transfers.map(line => ({ ...line, code: 'KRW' })));
+      showTransfers(breakdown(settlement, '통화별 정산 보기'), nativeTransfers);
+    } else {
+      showTransfers(settlement, nativeTransfers);
     }
 
     detailContent.append(element('h3', '지출 내역', 'expense-list-title'));
