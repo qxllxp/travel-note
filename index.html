@@ -80,6 +80,16 @@
       font: inherit;
     }
 
+    #trip-form input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      text-align: left;
+    }
+
     .actions { justify-content: flex-end; margin-top: 20px; }
     #other-field[hidden] { display: none; }
     [hidden] { display: none !important; }
@@ -311,6 +321,19 @@ button:active,
   .expense-summary-row > strong { min-width: 0; text-align: right; overflow-wrap: anywhere; }
   .expense-breakdown { margin-top: 10px; border-top: 1px solid #dce6de; }
   .expense-breakdown > summary { min-height: 44px; padding: 11px 0; color: #52665d; cursor: pointer; }
+  .expense-nav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .expense-nav [aria-pressed="true"] { background: #e4effc; color: #254e74; border-color: #bfd5ea; }
+  .expense-add { background: #ffe7e3; color: #a53934; border-color: #f5c7c1; }
+  .expense-rate-bar { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; margin: 10px 0 16px; text-align: right; color: #52665d; }
+  .expense-date { margin: 20px 0 8px; font-size: 1rem; color: #52665d; }
+  .expense-entry-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .expense-entry-head h3, .expense-entry-meta dd { min-width: 0; overflow-wrap: anywhere; }
+  .expense-entry-head button { flex: none; }
+  .expense-entry-amount { display: block; margin-top: 4px; font-size: 1.15rem; }
+  .expense-entry-meta { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; margin: 12px 0 0; font-size: .9rem; }
+  .expense-entry-meta dt { color: #52665d; }
+  .expense-entry-meta dd { margin: 0; }
+  .expense-booking-tag { display: inline-block; margin-top: 8px; padding: 3px 8px; border-radius: 12px; background: #e4f2e8; color: #245b40; }
 </style>
 </head>
 
@@ -1988,6 +2011,7 @@ function renderExpenses(trip) {
       ...payment, bookingName: booking.name, sourceBooking: booking, sourcePayment: payment
     })))
   ];
+  let expenseView = 'list';
   let editor = '';
   let editing = null;
 
@@ -2114,12 +2138,36 @@ function renderExpenses(trip) {
     const converted = all.length && !missing.length && codes.some(code => code !== 'KRW')
       ? travelSettlement(all, 1, item => item.amount * rate(item.currency)) : null;
 
-    const toolbar = element('div', '', 'expense-toolbar');
-    toolbar.append(button('+ 지출', () => open('expense'), 'primary'),
-      button('환전 환율', () => open('rates')));
+    const toolbar = element('div', '', 'expense-nav');
+    for (const [view, label] of [['list', '내역'], ['settlement', '정산']]) {
+      const control = button(label, () => {
+        expenseView = view;
+        draw();
+        detailContent.querySelector('.expense-nav [aria-pressed="true"]').focus();
+      });
+      control.setAttribute('aria-pressed', String(expenseView === view));
+      toolbar.append(control);
+    }
+    toolbar.append(button('+ 지출', () => {
+      expenseView = 'list';
+      open('expense');
+    }, 'expense-add'));
     detailContent.append(toolbar);
 
+    const rateBar = element('div', '', 'expense-rate-bar');
+    const savedRates = Object.entries(trip.expenseRates || {})
+      .filter(([code]) => Number.isFinite(rate(code)) && rate(code) > 0)
+      .map(([code]) => '1 ' + code + ' = ' +
+        rate(code).toLocaleString('ko-KR', { maximumFractionDigits: 12 }) + '원');
+    if (savedRates.length) rateBar.append(element('small', '적용 환율 · ' + savedRates.join(' / ')));
+    rateBar.append(button('환전 환율', () => open('rates')));
+    detailContent.append(rateBar);
+
     if (editor) drawEditor(codes);
+    if (expenseView === 'list') {
+      drawExpenseList(all);
+      return;
+    }
     const totals = detailCard('총경비');
     const people = [...new Set([...tripPeople(trip), ...all.flatMap(item => [item.payer || '나', ...(item.people || [])])])];
     const shares = detailCard('인당 부담액');
@@ -2185,16 +2233,36 @@ function renderExpenses(trip) {
       showTransfers(settlement, nativeTransfers);
     }
 
-    detailContent.append(element('h3', '지출 내역', 'expense-list-title'));
-    all.sort((a, b) => (b.paidOn || '').localeCompare(a.paidOn || ''));
-    for (const item of all) {
-      const card = detailCard(item.bookingName ? item.bookingName + ' · ' + item.label : item.label);
-      const row = element('div', '', 'expense-toolbar');
-      row.append(element('strong', money(item.amount, item.currency)));
-      row.append(button('수정', () => open('expense', item)));
-      card.append(row, element('p', [item.paidOn, '결제 ' + (item.payer || '나'),
-        '부담 ' + (item.people || [item.payer || '나']).join(', ')].filter(Boolean).join(' · ')));
-      if (item.bookingName) card.append(element('small', '예약에 연결된 결제'));
+  }
+
+  function drawExpenseList(all) {
+    if (!all.length) {
+      detailContent.append(element('p', '아직 기록한 지출이 없어요.'));
+      return;
+    }
+
+    const byDate = new Map();
+    for (const item of [...all].sort((a, b) => (b.paidOn || '').localeCompare(a.paidOn || ''))) {
+      const date = item.paidOn || '';
+      if (!byDate.has(date)) byDate.set(date, []);
+      byDate.get(date).push(item);
+    }
+
+    for (const [date, items] of byDate) {
+      detailContent.append(element('h3', date ? dateFormat.format(new Date(date + 'T00:00:00Z')) : '결제일 미입력', 'expense-date'));
+      for (const item of items) {
+        const card = element('article', '', 'card expense-entry');
+        const header = element('div', '', 'expense-entry-head');
+        const title = item.bookingName ? item.bookingName + ' · ' + item.label : item.label;
+        header.append(element('h3', title), button('수정', () => open('expense', item)));
+        const info = element('dl', '', 'expense-entry-meta');
+        const payer = item.payer || '나';
+        info.append(element('dt', '결제자'), element('dd', payer),
+          element('dt', '부담자'), element('dd', (item.people?.length ? item.people : [payer]).join(', ')));
+        card.append(header, element('strong', money(item.amount, item.currency), 'expense-entry-amount'), info);
+        if (item.bookingName) card.append(element('small', '예약 결제', 'expense-booking-tag'));
+        detailContent.append(card);
+      }
     }
   }
 
