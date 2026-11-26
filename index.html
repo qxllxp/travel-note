@@ -258,6 +258,53 @@ button:active,
   flex-shrink: 0;
   white-space: nowrap;
 }
+  .shopping-toolbar, .shopping-controls { display: flex; gap: 8px; align-items: center; }
+  .shopping-toolbar { flex-wrap: wrap; margin-bottom: 12px; }
+ /* 전체 */
+.shopping-toolbar button[aria-pressed] {
+  --filter-bg: #edf6ff;
+  --filter-selected: #d2e9ff;
+  --filter-text: #28587d;
+}
+
+/* 내꺼 */
+.shopping-toolbar button:nth-child(2) {
+  --filter-bg: #e4f2e8;
+  --filter-selected: #cce6d4;
+  --filter-text: #245b40;
+}
+
+/* 줄꺼 */
+ .shopping-toolbar button:nth-child(3) {
+  --filter-bg: #fce8f1;
+  --filter-selected: #ffdaed;
+  --filter-text: #a12662;
+}
+
+.shopping-toolbar button[aria-pressed] {
+  background: var(--filter-bg);
+  color: var(--filter-text);
+}
+
+.shopping-toolbar button[aria-pressed="true"] {
+  background: var(--filter-selected);
+  border-color: var(--filter-text);
+}
+  .shopping-add { margin-left: auto; min-width: 44px; }
+  .shopping-card { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .shopping-text { min-width: 0; overflow-wrap: anywhere; }
+  .shopping-text .shopping-memo { white-space: pre-wrap; }
+  #detail-content .shopping-card .check-row { margin: 7px 0; min-height: 28px; cursor: pointer; }
+  .shopping-card input[type="checkbox"] { flex: none; accent-color: #175843; }
+  .shopping-badge { display: inline-block; padding: 3px 8px; color: #245b40; background: #e4f2e8; border-radius: 20px; }
+  .shopping-badge.gift { background: #fce8f1; color: #a12662; }
+  .shopping-controls button { padding-inline: 9px; }
+  .expense-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .expense-total { font-size: 1.35rem; font-weight: 750; color: #175843; }
+  .expense-form .res-pay { min-width: 0; margin: 0; padding: 0; border: 0; }
+  .expense-error, .expense-delete { color: #a92d2d; }
+  .expense-delete { margin-right: auto; background: #fff0ee; }
+  .expense-list-title { margin: 20px 0 12px; }
 </style>
 </head>
 
@@ -297,7 +344,8 @@ button:active,
     <button type="button" data-tab="days">일정</button>
     <button type="button" data-tab="bookings">예약</button>
     <button type="button" data-tab="packing">짐 목록</button>
-    <button type="button" data-tab="shopping">살 것</button>
+    <button type="button" data-tab="shopping">쇼핑</button>
+    <button type="button" data-tab="expenses">경비</button>
   </div>
 
   <section id="detail-content"></section>
@@ -347,7 +395,7 @@ button:active,
         <small>이름을 쉼표로 구분해요.</small>
       </label>
 
-      <label>출발일 <input type="date" name="start" required></label>
+      <label>떠나는 날 <input type="date" name="start" required></label>
       <label>돌아오는 날 <input type="date" name="end" required></label>
 
       <p id="trip-form-error" role="alert"></p>
@@ -421,7 +469,7 @@ let showHidden = false;
       tripFormError.textContent = '';
       form.reset();
       end.min = '';
-      form.querySelector('h2').textContent = edit ? '여행 정보 수정' : source ? '여행 복제' : '새 여행';
+      form.querySelector('h2').textContent = edit ? '여행 정보 수정' : source ? '복제' : '새 여행';
       if (source) {
         form.elements.tripName.value = source.name;
         form.elements.region.value = source.region || '';
@@ -498,7 +546,7 @@ action.addEventListener('click', () => {
 
 const duplicate = document.createElement('button');
 duplicate.type = 'button';
-duplicate.textContent = '여행 복제';
+duplicate.textContent = '복제';
 duplicate.addEventListener('click', () => {
   menu.open = false;
   openTripForm(trip);
@@ -980,43 +1028,8 @@ card.append(summary, form);
   panel.className = 'res-panel';
   detailContent.append(style, panel);
 
-  function element(tag, text = '', className = '') {
-    const item = document.createElement(tag);
-    item.textContent = text;
-    item.className = className;
-    return item;
-  }
-
-  function button(text, action, className = '') {
-    const item = element('button', text, className);
-    item.type = 'button';
-    item.addEventListener('click', action);
-    return item;
-  }
-
   function groupFor(type) {
     return groups.find(group => group.types.includes(type)) || groups[2];
-  }
-
-  function field(label, name, value = '', type = 'text', required = false) {
-    const wrapper = element('label', label);
-    const input = document.createElement(type === 'textarea' ? 'textarea' : 'input');
-    if (type !== 'textarea') input.type = type;
-    input.name = name;
-    input.value = value || '';
-    input.required = required;
-    wrapper.append(input);
-    return wrapper;
-  }
-
-  function selectField(label, name, options, value) {
-    const wrapper = element('label', label);
-    const select = document.createElement('select');
-    select.name = name;
-    options.forEach(([key, text]) => select.add(new Option(text, key)));
-    select.value = value ?? '';
-    wrapper.append(select);
-    return wrapper;
   }
 
   function dateField(label, name, options, value, required = true) {
@@ -1133,97 +1146,6 @@ card.append(summary, form);
     };
   }
 
-  function currencyDecimals(code) {
-    if (['KRW', 'JPY', 'VND'].includes(code)) return 0;
-    return Math.min(2, new Intl.NumberFormat('ko-KR', {
-      style: 'currency', currency: code
-    }).resolvedOptions().maximumFractionDigits);
-  }
-
-  function formatAmount(value) {
-    const match = value.replace(/,/g, '').match(/^([0-9]*)(\.[0-9]*)?$/);
-    if (!match) return value;
-    const whole = (match[1] || '0').replace(/^0+(?=\d)/, '');
-    return value === '' ? '' : whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (match[2] || '');
-  }
-
-  function paymentField(payment = {}) {
-    const box = element('fieldset', '', 'res-pay');
-    box.append(element('legend', '결제 내역'));
-
-    const amount = field('실제로 낸 금액', 'amount', payment.amount ? formatAmount(String(payment.amount)) : '', 'text', true);
-    const amountInput = amount.querySelector('input');
-    amountInput.inputMode = 'decimal';
-    amountInput.addEventListener('input', () => {
-      const raw = amountInput.value;
-      const offset = amountInput.selectionStart;
-      const significant = raw.slice(0, offset).replace(/,/g, '').length;
-      const formatted = formatAmount(raw);
-      if (formatted === raw) return;
-      amountInput.value = formatted;
-      let caret = 0;
-      let seen = 0;
-      while (caret < formatted.length && seen < significant) {
-        if (formatted[caret] !== ',') seen++;
-        caret++;
-      }
-      amountInput.setSelectionRange(caret, caret);
-    });
-
-    const defaultCurrency = trip.currency || 'KRW';
-    const currency = payment.currency || defaultCurrency;
-    const choices = [...new Set([defaultCurrency, 'KRW', 'USD', currency])]
-      .map(code => [code, code]);
-
-    const roster = tripPeople(trip);
-    const selected = new Set(payment.people || ['나']);
-    const members = [...new Set([...roster, ...selected, payment.payer || '나'])];
-    const people = element('fieldset', '', 'pay-people');
-    people.append(element('legend', '부담할 사람'));
-
-    function checkbox(caption, name, value) {
-      const wrap = element('label');
-      const control = document.createElement('input');
-      control.type = 'checkbox';
-      control.name = name;
-      control.value = value;
-      wrap.append(control, document.createTextNode(caption));
-      people.append(wrap);
-      return control;
-    }
-
-    const all = checkbox('전체', '', '');
-    const checks = members.map(person => {
-      const control = checkbox(person, 'people', person);
-      control.checked = selected.has(person);
-      return control;
-    });
-
-    function updateAll() {
-      const count = checks.filter(control => control.checked).length;
-      all.checked = count === checks.length;
-      all.indeterminate = count > 0 && count < checks.length;
-    }
-    all.addEventListener('change', () => {
-      checks.forEach(control => { control.checked = all.checked; });
-      updateAll();
-    });
-    checks.forEach(control => control.addEventListener('change', updateAll));
-    updateAll();
-
-    box.append(
-      field('결제 이름', 'label', payment.label),
-      amount,
-      selectField('통화', 'currency', choices, currency),
-      field('결제일', 'paidOn', payment.paidOn || today, 'date', true),
-      selectField('결제자', 'payer', members.map(person => [person, person]), payment.payer || '나'),
-      people,
-      button('이 결제 내역 빼기', () => box.remove(), 'res-delete')
-    );
-
-    return box;
-  }
-
   function openEditor(group, existing = null, draft = null) {
     editorState = { group, existing, draft };
     draw();
@@ -1288,10 +1210,10 @@ card.append(summary, form);
     );
 
     const payments = element('div');
-    (saved.payments || []).forEach(payment => payments.append(paymentField(payment)));
+    (saved.payments || []).forEach(payment => payments.append(paymentField(trip, today, payment)));
     form.append(
       payments,
-      button('+ 결제 내역 추가', () => payments.append(paymentField())),
+      button('+ 결제 내역 추가', () => payments.append(paymentField(trip, today))),
       element('small', '예약금과 잔금처럼 따로 낸 돈은 결제 내역을 각각 추가하세요.')
     );
 
@@ -1360,34 +1282,7 @@ card.append(summary, form);
           }
         }
 
-        booking.payments = Array.from(payments.children, box => {
-          const read = name => box.querySelector('[name="' + name + '"]').value.trim();
-          const rawAmount = read('amount').replace(/,/g, '');
-          const amount = Number(rawAmount);
-          const payer = read('payer');
-          const people = Array.from(box.querySelectorAll('[name="people"]:checked'), control => control.value);
-          const currency = read('currency');
-          const decimals = currencyDecimals(currency);
-          const validAmount = /^\d+(?:\.\d+)?$/.test(rawAmount) &&
-            (rawAmount.split('.')[1]?.length || 0) <= decimals;
-          if (!validAmount || !Number.isFinite(amount) || amount <= 0 || amount > 100000000000) {
-            throw new Error(decimals
-              ? currency + ' 금액은 0보다 크게, 소수 ' + decimals + '자리까지 입력해 주세요.'
-              : currency + ' 금액은 0보다 큰 정수로 입력해 주세요.');
-          }
-          if (!payer || !people.length) {
-            throw new Error('결제자와 부담할 사람을 선택해 주세요.');
-          }
-
-          return {
-            label: read('label') || '결제',
-            amount,
-            currency,
-            paidOn: read('paidOn'),
-            payer,
-            people
-          };
-        });
+        booking.payments = Array.from(payments.children, readPayment);
 
         if (existing) Object.assign(existing, booking);
         else trip.bookings.push(booking);
@@ -1467,7 +1362,7 @@ card.append(summary, form);
     const controls = element('div', '', 'res-copy');
     controls.append(
       button('수정', () => openEditor(group, booking)),
-      button('예약 복제', () => {
+      button('복제', () => {
         const draft = { ...booking, code: '', payments: [], checkout: '', arrivalDate: '' };
         openEditor(group, null, draft);
       })
@@ -1576,11 +1471,49 @@ card.append(summary, form);
         filters.append(control);
       }
 
-      addFilter('전체', '');
-      filterDates.forEach(date => {
-        addFilter(date.label + (date.value === today ? ' · 오늘' : ''), date.value);
-      });
-      panel.append(filters);
+     addFilter('전체', '');
+     if (dates.length <= 4) {
+  filterDates.forEach(date => {
+    const label = date.label + (date.value === today ? ' · 오늘' : '');
+    addFilter(label, date.value);
+  });
+} else {
+
+if (filterDates.some(date => date.value === today)) {
+  addFilter('오늘', today);
+}
+
+const select = document.createElement('select');
+select.setAttribute('aria-label', '예약 날짜 선택');
+
+const placeholder = new Option('날짜 선택', '');
+placeholder.disabled = true;
+select.add(placeholder);
+
+filterDates.forEach(date => {
+  const label = date.label + ' · ' + dateText(date.value) +
+    (date.value === today ? ' · 오늘' : '');
+  select.add(new Option(label, date.value));
+});
+
+select.value = selectedDate;
+select.style.width = 'auto';
+select.style.maxWidth = '100%';
+select.style.marginTop = '0';
+
+select.addEventListener('change', () => {
+  selectedDate = select.value;
+  editorState = null;
+  draw();
+  panel.querySelector('.res-filters select')?.focus();
+});
+
+filters.append(select);
+  filters.append(select);
+}
+panel.append(filters);
+panel.append(filters);
+
       if (selectedDate) panel.append(element('h3', dateText(selectedDate)));
     }
 
@@ -1607,9 +1540,17 @@ card.append(summary, form);
 
 
 
-  const isPacking = detailTab === 'packing';
-  const items = isPacking ? trip.packing : trip.shopping;
-  const card = isPacking ? null : detailCard('여행에서 살 것');
+  if (detailTab === 'expenses') {
+    renderExpenses(trip);
+    return;
+  }
+
+  if (detailTab === 'shopping') {
+    renderShopping(trip);
+    return;
+  }
+
+  const items = trip.packing;
 
   for (const item of items) {
     const label = document.createElement('label');
@@ -1625,11 +1566,6 @@ card.append(summary, form);
       item.done = checkbox.checked;
       saveTripDetails();
     });
-
-    if (!isPacking) {
-      card.append(label);
-      continue;
-    }
 
     const row = document.createElement('article');
     row.className = 'card packing-item';
@@ -1657,8 +1593,8 @@ card.append(summary, form);
 
   const form = document.createElement('form');
   const input = document.createElement('input');
-  input.placeholder = isPacking ? '예: 선글라스' : '예: 친구 줄 초콜릿';
-  input.setAttribute('aria-label', isPacking ? '새 준비물' : '새로 살 것');
+  input.placeholder = '예: 선글라스';
+  input.setAttribute('aria-label', '새 준비물');
   input.required = true;
   const add = document.createElement('button');
   add.textContent = '+';
@@ -1672,8 +1608,564 @@ card.append(summary, form);
     saveTripDetails();
     renderTripDetail();
   });
-  const addCard = card || detailCard('준비물 추가');
+  const addCard = detailCard('준비물 추가');
   addCard.append(form);
+}
+
+function renderShopping(trip) {
+  const categories = { personal: '내꺼', gift: '줄꺼' };
+  let filter = '';
+  let editorOpen = false;
+  let editing = null;
+  const kindOf = item => item.kind === 'gift' ? 'gift' : 'personal';
+
+  function node(tag, text, className = '') {
+    const element = document.createElement(tag);
+    element.textContent = text;
+    element.className = className;
+    return element;
+  }
+
+  function button(text, action, className = '') {
+    const control = node('button', text, className);
+    control.type = 'button';
+    control.addEventListener('click', action);
+    return control;
+  }
+
+  function save(next) {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(trips.map(entry =>
+        entry === trip ? { ...entry, shopping: next } : entry
+      )));
+      trip.shopping = next;
+      return true;
+    } catch {
+      window.alert('브라우저에 쇼핑 목록을 저장할 수 없어요.');
+      return false;
+    }
+  }
+
+  function open(item = null) {
+    editing = item;
+    editorOpen = true;
+    draw();
+    detailContent.querySelector('.shopping-form input[name="name"]').focus();
+  }
+
+  function drawEditor() {
+    const card = detailCard(editing ? '쇼핑 항목 수정' : '쇼핑 항목 추가');
+    const form = node('form', '', 'shopping-form');
+    form.innerHTML = `
+      <label>구분
+        <select name="kind"><option value="personal">내꺼</option><option value="gift">줄꺼</option></select>
+      </label>
+      <label>무엇을 <input name="name" placeholder="예: 말차 과자" required></label>
+      <label class="shopping-recipient">누구에게 <input name="recipient" placeholder="예: 엄마"></label>
+      <label>몇 개 <input name="quantity" type="number" min="1" step="1" inputmode="numeric" required></label>
+      <label>메모 <textarea name="memo" placeholder="살 곳이나 기억할 것"></textarea></label>
+      <div class="actions">
+        <button type="button" class="shopping-cancel">닫기</button>
+        <button type="submit" class="primary">저장</button>
+      </div>
+    `;
+    const { kind, name, recipient, quantity, memo } = form.elements;
+    kind.value = editing ? kindOf(editing) : filter || 'personal';
+    name.value = editing?.name || '';
+    recipient.value = editing?.recipient || '';
+    quantity.value = editing?.quantity || 1;
+    memo.value = editing?.memo || '';
+
+    function updateRecipient() {
+      recipient.closest('label').hidden = kind.value !== 'gift';
+      recipient.disabled = kind.value !== 'gift';
+    }
+
+    kind.addEventListener('change', updateRecipient);
+    updateRecipient();
+    form.querySelector('.shopping-cancel').addEventListener('click', () => {
+      editorOpen = false;
+      draw();
+    });
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const title = name.value.trim();
+      if (!title) {
+        name.setCustomValidity('무엇을 살지 입력해 주세요.');
+        name.reportValidity();
+        return;
+      }
+      const item = {
+        name: title, kind: kind.value, done: Boolean(editing?.done),
+        recipient: recipient.disabled ? '' : recipient.value.trim(),
+        quantity: Number(quantity.value), memo: memo.value.trim()
+      };
+      const next = editing
+        ? trip.shopping.map(entry => entry === editing ? item : entry)
+        : [...trip.shopping, item];
+      if (!save(next)) return;
+      if (filter) filter = item.kind;
+      editorOpen = false;
+      draw();
+    });
+
+    name.addEventListener('input', () => name.setCustomValidity(''));
+    card.append(form);
+  }
+
+  function draw() {
+    detailContent.replaceChildren();
+    const toolbar = node('div', '', 'shopping-toolbar');
+    for (const [value, label] of [['', '전체'], ...Object.entries(categories)]) {
+      const control = button(label, () => {
+        filter = value;
+        editorOpen = false;
+        draw();
+      });
+      control.setAttribute('aria-pressed', String(filter === value));
+      toolbar.append(control);
+    }
+    const add = button('+', () => open(), 'primary shopping-add');
+    add.setAttribute('aria-label', '쇼핑 항목 추가');
+    toolbar.append(add);
+    detailContent.append(toolbar);
+    if (editorOpen) drawEditor();
+
+    const visible = trip.shopping.filter(item => !filter || kindOf(item) === filter)
+      .sort((a, b) => Number(Boolean(a.done)) - Number(Boolean(b.done)));
+
+    if (!visible.length && !editorOpen) {
+      detailContent.append(node('p', '아직 담아둔 물건이 없어요.'));
+    }
+
+    for (const item of visible) {
+      const card = node('article', '', 'card shopping-card');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = Boolean(item.done);
+      const label = node('label', '', 'check-row');
+      label.append(checkbox, node('span', item.name + ' × ' + (item.quantity || 1)));
+      checkbox.addEventListener('change', () => {
+        const next = trip.shopping.map(entry =>
+          entry === item ? { ...entry, done: checkbox.checked } : entry
+        );
+        if (save(next)) draw();
+        else checkbox.checked = Boolean(item.done);
+      });
+
+      const badge = node('small', categories[kindOf(item)], 'shopping-badge ' + kindOf(item));
+      const text = node('div', '', 'shopping-text');
+      text.append(badge, label);
+      if (kindOf(item) === 'gift' && item.recipient) {
+        text.append(node('p', item.recipient));
+      }
+      if (item.memo) text.append(node('p', item.memo, 'shopping-memo'));
+
+      const edit = button('수정', () => open(item));
+      const remove = button('×', () => {
+        if (!save(trip.shopping.filter(entry => entry !== item))) return;
+        if (editing === item) editorOpen = false;
+        draw();
+      }, 'packing-remove');
+      remove.setAttribute('aria-label', item.name + ' 삭제');
+      const actions = node('div', '', 'shopping-controls');
+      actions.append(edit, remove);
+      card.append(text, actions);
+      detailContent.append(card);
+    }
+  }
+
+  draw();
+}
+
+  function element(tag, text = '', className = '') {
+    const item = document.createElement(tag);
+    item.textContent = text;
+    item.className = className;
+    return item;
+  }
+
+  function button(text, action, className = '') {
+    const item = element('button', text, className);
+    item.type = 'button';
+    item.addEventListener('click', action);
+    return item;
+  }
+
+  function field(label, name, value = '', type = 'text', required = false) {
+    const wrapper = element('label', label);
+    const input = document.createElement(type === 'textarea' ? 'textarea' : 'input');
+    if (type !== 'textarea') input.type = type;
+    input.name = name;
+    input.value = value || '';
+    input.required = required;
+    wrapper.append(input);
+    return wrapper;
+  }
+
+  function selectField(label, name, options, value) {
+    const wrapper = element('label', label);
+    const select = document.createElement('select');
+    select.name = name;
+    options.forEach(([key, text]) => select.add(new Option(text, key)));
+    select.value = value ?? '';
+    wrapper.append(select);
+    return wrapper;
+  }
+
+  function currencyDecimals(code) {
+    if (['KRW', 'JPY', 'VND'].includes(code)) return 0;
+    return Math.min(2, new Intl.NumberFormat('ko-KR', {
+      style: 'currency', currency: code
+    }).resolvedOptions().maximumFractionDigits);
+  }
+
+  function formatAmount(value) {
+    const match = value.replace(/,/g, '').match(/^([0-9]*)(\.[0-9]*)?$/);
+    if (!match) return value;
+    const whole = (match[1] || '0').replace(/^0+(?=\d)/, '');
+    return value === '' ? '' : whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (match[2] || '');
+  }
+
+  function paymentField(trip, today, payment = {}, standalone = false) {
+    const box = element('fieldset', '', 'res-pay');
+    if (!standalone) box.append(element('legend', '결제 내역'));
+
+    const amount = field('실제로 낸 금액', 'amount', payment.amount ? formatAmount(String(payment.amount)) : '', 'text', true);
+    const amountInput = amount.querySelector('input');
+    amountInput.inputMode = 'decimal';
+    amountInput.addEventListener('input', () => {
+      const raw = amountInput.value;
+      const offset = amountInput.selectionStart;
+      const significant = raw.slice(0, offset).replace(/,/g, '').length;
+      const formatted = formatAmount(raw);
+      if (formatted === raw) return;
+      amountInput.value = formatted;
+      let caret = 0;
+      let seen = 0;
+      while (caret < formatted.length && seen < significant) {
+        if (formatted[caret] !== ',') seen++;
+        caret++;
+      }
+      amountInput.setSelectionRange(caret, caret);
+    });
+
+    const defaultCurrency = trip.currency || 'KRW';
+    const currency = payment.currency || defaultCurrency;
+    const choices = [...new Set([defaultCurrency, 'KRW', 'USD', currency])]
+      .map(code => [code, code]);
+
+    const roster = tripPeople(trip);
+    const selected = new Set(payment.people || ['나']);
+    const members = [...new Set([...roster, ...selected, payment.payer || '나'])];
+    const people = element('fieldset', '', 'pay-people');
+    people.append(element('legend', '부담할 사람'));
+
+    function checkbox(caption, name, value) {
+      const wrap = element('label');
+      const control = document.createElement('input');
+      control.type = 'checkbox';
+      control.name = name;
+      control.value = value;
+      wrap.append(control, document.createTextNode(caption));
+      people.append(wrap);
+      return control;
+    }
+
+    const all = checkbox('전체', '', '');
+    const checks = members.map(person => {
+      const control = checkbox(person, 'people', person);
+      control.checked = selected.has(person);
+      return control;
+    });
+
+    function updateAll() {
+      const count = checks.filter(control => control.checked).length;
+      all.checked = count === checks.length;
+      all.indeterminate = count > 0 && count < checks.length;
+    }
+    all.addEventListener('change', () => {
+      checks.forEach(control => { control.checked = all.checked; });
+      updateAll();
+    });
+    checks.forEach(control => control.addEventListener('change', updateAll));
+    updateAll();
+
+    box.append(
+      field(standalone ? '지출 이름' : '결제 이름', 'label', payment.label, 'text', standalone),
+      amount,
+      selectField('통화', 'currency', choices, currency),
+      field('결제일', 'paidOn', payment.paidOn || today, 'date', true),
+      selectField('결제자', 'payer', members.map(person => [person, person]), payment.payer || '나'),
+      people
+    );
+
+    if (!standalone) box.append(button('이 결제 내역 빼기', () => box.remove(), 'res-delete'));
+    return box;
+  }
+
+function readPayment(box) {
+  const read = name => box.querySelector('[name="' + name + '"]').value.trim();
+  const rawAmount = read('amount').replace(/,/g, '');
+  const amount = Number(rawAmount);
+  const payer = read('payer');
+  const people = Array.from(box.querySelectorAll('[name="people"]:checked'), control => control.value);
+  const currency = read('currency');
+  const decimals = currencyDecimals(currency);
+  const validAmount = /^\d+(?:\.\d+)?$/.test(rawAmount) &&
+    (rawAmount.split('.')[1]?.length || 0) <= decimals;
+  if (!validAmount || !Number.isFinite(amount) || amount <= 0 || amount > 100000000000) {
+    throw new Error(decimals
+      ? currency + ' 금액은 0보다 크게, 소수 ' + decimals + '자리까지 입력해 주세요.'
+      : currency + ' 금액은 0보다 큰 정수로 입력해 주세요.');
+  }
+  if (!payer || !people.length) {
+    throw new Error('결제자와 부담할 사람을 선택해 주세요.');
+  }
+
+  return {
+    label: read('label') || '결제',
+    amount,
+    currency,
+    paidOn: read('paidOn'),
+    payer,
+    people
+  };
+}
+
+function travelSettlement(records, scale, amountFor) {
+  const paid = new Map();
+  const owed = new Map();
+  const add = (map, key, value) => map.set(key, (map.get(key) || 0) + value);
+  let total = 0;
+  for (const record of records) {
+    const units = Math.round(amountFor(record) * scale);
+    const payer = record.payer || '나';
+    const people = [...new Set(record.people?.length ? record.people : [payer])];
+    const share = Math.floor(units / people.length);
+    const remainder = units % people.length;
+    total += units;
+    add(paid, payer, units);
+    people.forEach((person, index) => add(owed, person, share + (index < remainder ? 1 : 0)));
+  }
+
+  const names = [...new Set([...paid.keys(), ...owed.keys()])];
+  const balances = names.map(name => ({
+    name, amount: (paid.get(name) || 0) - (owed.get(name) || 0)
+  }));
+  const debtors = balances.filter(balance => balance.amount < 0);
+  const creditors = balances.filter(balance => balance.amount > 0);
+  const transfers = [];
+  let debtorIndex = 0;
+  let creditorIndex = 0;
+  while (debtorIndex < debtors.length && creditorIndex < creditors.length) {
+    const debtor = debtors[debtorIndex];
+    const creditor = creditors[creditorIndex];
+    const amount = Math.min(-debtor.amount, creditor.amount);
+    transfers.push({ from: debtor.name, to: creditor.name, amount: amount / scale });
+    debtor.amount += amount;
+    creditor.amount -= amount;
+    if (!debtor.amount) debtorIndex++;
+    if (!creditor.amount) creditorIndex++;
+  }
+  return { total: total / scale, owed, transfers, scale };
+}
+
+function renderExpenses(trip) {
+  const [year, month, day] = [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()];
+  const today = [year, month, day].map(value => String(value).padStart(2, '0')).join('-');
+  const direct = () => trip.expenses || [];
+  const records = () => [
+    ...direct(),
+    ...trip.bookings.flatMap(booking => (booking.payments || []).map(payment => ({
+      ...payment, bookingName: booking.name, sourceBooking: booking, sourcePayment: payment
+    })))
+  ];
+  let editor = '';
+  let editing = null;
+
+  function money(amount, code) {
+    return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: code }).format(amount);
+  }
+
+  function commit(changes) {
+    localStorage.setItem(storageKey, JSON.stringify(trips.map(entry =>
+      entry === trip ? { ...entry, ...changes } : entry
+    )));
+    Object.assign(trip, changes);
+  }
+
+  function updateExpense(item, replacement) {
+    if (item?.sourceBooking) {
+      commit({ bookings: trip.bookings.map(booking => {
+        if (booking !== item.sourceBooking) return booking;
+        const payments = booking.payments.flatMap(payment =>
+          payment !== item.sourcePayment ? [payment] : replacement ? [replacement] : []
+        );
+        return { ...booking, payments };
+      }) });
+      return;
+    }
+    const expenses = item
+      ? direct().flatMap(entry => entry !== item ? [entry] : replacement ? [replacement] : [])
+      : [...direct(), replacement];
+    commit({ expenses });
+  }
+
+  function open(mode, item = null) {
+    editor = mode;
+    editing = item;
+    draw();
+    detailContent.querySelector('.expense-form').scrollIntoView({ block: 'nearest' });
+  }
+
+  function drawEditor(codes) {
+    const rates = editor === 'rates';
+    const card = detailCard(rates ? '실제 환전 환율' : editing ? '지출 수정' : '지출 추가');
+    const form = element('form', '', 'expense-form');
+    let payment;
+    const foreign = [...new Set([trip.currency, 'USD', ...codes])].filter(code => code && code !== 'KRW');
+    if (rates) {
+      form.append(element('p', '외화 1단위당 실제로 적용할 원화 금액을 입력해요. 예: 1엔 = 9.2원.'));
+      foreign.forEach(code => {
+        const rate = field('1 ' + code + '당 원화', code, trip.expenseRates?.[code], 'number');
+        const input = rate.querySelector('input');
+        input.step = 'any';
+        input.min = '0.000001';
+        input.inputMode = 'decimal';
+        form.append(rate);
+      });
+    } else {
+      payment = paymentField(trip, today, editing || {}, true);
+      form.append(payment);
+    }
+
+    const error = element('p', '', 'expense-error');
+    error.setAttribute('role', 'alert');
+    const controls = element('div', '', 'actions');
+    if (editing) {
+      controls.append(button('삭제', () => {
+        const question = editing.sourceBooking
+          ? '경비와 예약에서 이 결제 내역을 함께 삭제할까요?'
+          : '이 지출을 삭제할까요?';
+        if (!window.confirm(question)) return;
+        try {
+          updateExpense(editing, null);
+          editor = '';
+          editing = null;
+          draw();
+        } catch (problem) {
+          error.textContent = problem.message;
+        }
+      }, 'expense-delete'));
+    }
+    controls.append(button('닫기', () => { editor = ''; editing = null; draw(); }));
+    const submit = element('button', '저장', 'primary');
+    submit.type = 'submit';
+    controls.append(submit);
+    form.append(error, controls);
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      try {
+        if (rates) {
+          const values = new FormData(form);
+          const expenseRates = { ...trip.expenseRates };
+          foreign.forEach(code => {
+            const raw = values.get(code);
+            if (raw === '') delete expenseRates[code];
+            else if (Number.isFinite(Number(raw)) && Number(raw) > 0) expenseRates[code] = Number(raw);
+            else throw new Error('환율은 0보다 큰 숫자로 입력해 주세요.');
+          });
+          commit({ expenseRates });
+        } else {
+          const item = readPayment(payment);
+          if (!payment.querySelector('[name="label"]').value.trim()) {
+            throw new Error('지출 이름을 입력해 주세요.');
+          }
+          updateExpense(editing, item);
+        }
+        editor = '';
+        editing = null;
+        draw();
+      } catch (problem) {
+        error.textContent = problem.message || '저장하지 못했어요.';
+      }
+    });
+    card.append(form);
+  }
+
+  function draw() {
+    detailContent.replaceChildren();
+    const all = records();
+    const codes = [...new Set(all.map(item => item.currency))];
+    const summary = new Map(codes.map(code => [
+      code, travelSettlement(all.filter(item => item.currency === code),
+        10 ** currencyDecimals(code), item => item.amount)
+    ]));
+    const rate = code => code === 'KRW' ? 1 : Number(trip.expenseRates?.[code]);
+    const missing = codes.filter(code => !Number.isFinite(rate(code)) || rate(code) <= 0);
+    const converted = all.length && !missing.length && codes.some(code => code !== 'KRW')
+      ? travelSettlement(all, 1, item => item.amount * rate(item.currency)) : null;
+
+    const toolbar = element('div', '', 'expense-toolbar');
+    toolbar.append(button('+ 지출', () => open('expense'), 'primary'),
+      button('환전 환율', () => open('rates')));
+    detailContent.append(toolbar);
+
+    if (editor) drawEditor(codes);
+    const totals = detailCard('총경비');
+    const people = [...new Set([...tripPeople(trip), ...all.flatMap(item => [item.payer || '나', ...(item.people || [])])])];
+    const shares = detailCard('인당 부담액');
+    const settlement = detailCard('송금 정산');
+    if (!all.length) {
+      totals.append(element('p', '아직 기록한 지출이 없어요.'));
+      shares.append(element('p', '지출을 추가하면 부담액이 보여요.'));
+      settlement.append(element('p', '정산할 지출이 없어요.'));
+      return;
+    }
+
+    totals.append(element('p', [...summary].map(([code, result]) => money(result.total, code)).join(' · '), 'expense-total'));
+    if (converted) totals.append(element('p', '원화 환산 · ' + money(converted.total, 'KRW')));
+    if (missing.length) totals.append(element('p', '원화로 합치려면 환율을 입력하세요 · ' + missing.join(', ')));
+
+    for (const person of people) {
+      const byCurrency = [...summary].map(([code, result]) =>
+        money((result.owed.get(person) || 0) / result.scale, code)
+      ).join(' · ');
+      shares.append(element('p', person + ' · ' + byCurrency));
+      if (converted) shares.append(element('small',
+        '원화 환산 ' + money(converted.owed.get(person) || 0, 'KRW')));
+    }
+
+    function showTransfers(lines) {
+      if (!lines.length) settlement.append(element('p', '서로 보낼 돈이 없어요.'));
+      lines.forEach(({ from, to, amount, code }) => settlement.append(element('p',
+        from + ' → ' + to + ' · ' + money(amount, code))));
+    }
+    settlement.append(element('small', '통화별 정산'));
+    showTransfers([...summary].flatMap(([code, result]) =>
+      result.transfers.map(line => ({ ...line, code }))
+    ));
+    if (converted) {
+      settlement.append(element('h4', '원화로 한 번에 정산할 때'));
+      showTransfers(converted.transfers.map(line => ({ ...line, code: 'KRW' })));
+    }
+
+    detailContent.append(element('h3', '지출 내역', 'expense-list-title'));
+    all.sort((a, b) => (b.paidOn || '').localeCompare(a.paidOn || ''));
+    for (const item of all) {
+      const card = detailCard(item.bookingName ? item.bookingName + ' · ' + item.label : item.label);
+      const row = element('div', '', 'expense-toolbar');
+      row.append(element('strong', money(item.amount, item.currency)));
+      row.append(button('수정', () => open('expense', item)));
+      card.append(row, element('p', [item.paidOn, '결제 ' + (item.payer || '나'),
+        '부담 ' + (item.people || [item.payer || '나']).join(', ')].filter(Boolean).join(' · ')));
+      if (item.bookingName) card.append(element('small', '예약에 연결된 결제'));
+    }
+  }
+
+  draw();
 }
 
   </script>
