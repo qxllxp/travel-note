@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
-  <link rel="apple-touch-icon" href="./travel-icon.png">
 <head>
+  <link rel="apple-touch-icon" href="./travel-icon.png">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>여행노트</title>
@@ -362,19 +362,30 @@ button:active,
   .res-payment-add small { display: block; margin-top: 5px; }
   .res-payment-actions > .res-payment-remove { margin-inline-end: auto; }
 .res-panel .actions > .res-delete { margin-inline-end: auto; }
+  #trip-home > .top-bar, #trip-home > .hero, #trip-list { margin-inline: 0; }
+  #trip-home .home-hero { position: relative; padding-right: 58px; overflow-wrap: anywhere; }
+  .home-tools { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 22px; color: #52665d; }
+  .home-tools button, .home-hero-edit { display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; }
+  .home-tools svg, .home-hero-edit svg { width: 18px; height: 18px; }
+  .home-hero-edit { position: absolute; top: 8px; right: 8px; color: white; }
+  .home-tools-divider { width: 1px; height: 16px; background: #c5d5cb; }
+  .res-pay.res-booking-payment { margin-inline: 0; }
+  .home-settings-error { color: #a53934; }
+  .home-settings-error:empty { display: none; }
 </style>
 </head>
 
 <body>
-  <main>
+  <main id="trip-home">
     <header class="top-bar">
       <strong>여행노트</strong>
       <button class="primary" id="open-trip">+ 새 여행</button>
     </header>
 
-    <section class="hero">
-      <h1>나의 여행</h1>
-      <p>다음에 떠날 곳과 다녀온 여행을 한곳에.</p>
+    <section class="hero home-hero">
+      <h1 id="home-heading">나의 여행</h1>
+      <p id="home-description">다음에 떠날 곳과 다녀온 여행을 한곳에.</p>
+      <button type="button" id="edit-home-copy" class="home-hero-edit" aria-label="메인 문구 수정" title="메인 문구 수정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-.8L20 7l-3-3L5 16z M15 6l3 3"/></svg></button>
     </section>
 
     <div class="top-bar">
@@ -386,6 +397,11 @@ button:active,
 </div>
     <p id="empty">아직 여행이 없어요. 첫 여행을 만들어보세요.</p>
     <div id="trip-list"></div>
+    <footer class="home-tools" id="home-tools" aria-label="여행노트 설정">
+      <button type="button" id="refresh-travel" aria-label="새로고침" title="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5 M20 12a8 8 0 1 0-2 5.3"/></svg></button>
+      <span class="home-tools-divider" aria-hidden="true"></span>
+      <button type="button" id="edit-home-pin" aria-label="PIN 설정" title="PIN 설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4a5 5 0 0 0-4.4 7.4L4 17v3h3l5.6-5.6A5 5 0 1 0 14 4z M15 8h.01"/></svg></button>
+    </footer>
   </main>
 
 <main id="trip-detail" hidden>
@@ -491,6 +507,25 @@ button:active,
       <button type="button" id="cancel-trip-delete" autofocus>취소</button>
       <button type="button" id="confirm-trip-delete" disabled>삭제</button>
     </div>
+  </dialog>
+  <dialog id="home-copy-dialog" aria-labelledby="home-copy-title">
+    <form id="home-copy-form">
+      <h2 id="home-copy-title">메인 문구 수정</h2>
+      <label>제목 <input name="heading" maxlength="60" required></label>
+      <label>소개 문구 <input name="description" maxlength="140"></label>
+      <p class="home-settings-error" role="alert"></p>
+      <div class="actions"><button type="button" data-close-home-dialog>닫기</button><button class="primary">저장</button></div>
+    </form>
+  </dialog>
+  <dialog id="home-pin-dialog" aria-labelledby="home-pin-title">
+    <form id="home-pin-form">
+      <h2 id="home-pin-title">PIN 설정</h2>
+      <label id="current-pin-field" hidden>현재 PIN <input name="currentPin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4"></label>
+      <label>새 PIN 4자리 <input name="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required></label>
+      <label>새 PIN 확인 <input name="confirmPin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required></label>
+      <p class="home-settings-error" role="alert"></p>
+      <div class="actions"><button type="button" data-close-home-dialog>닫기</button><button class="primary">저장</button></div>
+    </form>
   </dialog>
   <script>
     const dialog = document.getElementById('new-trip');
@@ -742,6 +777,7 @@ list.append(card);
   const visibleTrips = trips.filter(trip => Boolean(trip.hidden) === showHidden);
   list.replaceChildren();
   visibleTrips.forEach(addTripCard);
+  document.getElementById('home-tools').hidden = showHidden;
 
   const empty = document.getElementById('empty');
   empty.hidden = visibleTrips.length > 0;
@@ -2388,6 +2424,118 @@ function renderExpenses(trip) {
   draw();
 }
 
+const homeCopyKey = 'my-travel-notebook-home-copy';
+const homeHeading = document.getElementById('home-heading');
+const homeDescription = document.getElementById('home-description');
+const homeCopyDialog = document.getElementById('home-copy-dialog');
+const homeCopyForm = document.getElementById('home-copy-form');
+const homePinDialog = document.getElementById('home-pin-dialog');
+const homePinForm = document.getElementById('home-pin-form');
+const homePinButton = document.getElementById('edit-home-pin');
+
+function applyHomeCopy(copy) {
+  homeHeading.textContent = copy.heading;
+  homeDescription.textContent = copy.description;
+  homeDescription.hidden = !copy.description;
+}
+
+try {
+  const savedCopy = JSON.parse(localStorage.getItem(homeCopyKey));
+  if (savedCopy && typeof savedCopy.heading === 'string' && typeof savedCopy.description === 'string') {
+    applyHomeCopy(savedCopy);
+  }
+} catch {
+  // Keep the default text if the saved preferences cannot be read.
+}
+
+function openHomeSettings(dialog, form) {
+  form.querySelector('.home-settings-error').textContent = '';
+  dialog.showModal();
+}
+
+function updateHomePinLabel() {
+  const label = localStorage.getItem(pinKey) === null ? 'PIN 설정' : 'PIN 변경';
+  homePinButton.setAttribute('aria-label', label);
+  homePinButton.title = label;
+}
+
+document.getElementById('refresh-travel').addEventListener('click', () => {
+  const url = new URL(location.href);
+  if (url.protocol === 'file:') {
+    location.reload();
+    return;
+  }
+  url.searchParams.set('_refresh', Date.now().toString());
+  location.replace(url.href);
+});
+
+document.getElementById('edit-home-copy').addEventListener('click', () => {
+  homeCopyForm.elements.heading.value = homeHeading.textContent;
+  homeCopyForm.elements.description.value = homeDescription.textContent;
+  openHomeSettings(homeCopyDialog, homeCopyForm);
+});
+
+homeCopyForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const copy = {
+    heading: homeCopyForm.elements.heading.value.trim(),
+    description: homeCopyForm.elements.description.value.trim()
+  };
+  const error = homeCopyForm.querySelector('.home-settings-error');
+  if (!copy.heading) {
+    error.textContent = '제목을 입력해 주세요.';
+    return;
+  }
+  try {
+    localStorage.setItem(homeCopyKey, JSON.stringify(copy));
+    applyHomeCopy(copy);
+    homeCopyDialog.close();
+  } catch {
+    error.textContent = '문구를 저장할 수 없어요.';
+  }
+});
+
+homePinButton.addEventListener('click', () => {
+  homePinForm.reset();
+  const hasPin = localStorage.getItem(pinKey) !== null;
+  const current = homePinForm.elements.currentPin;
+  current.required = hasPin;
+  current.disabled = !hasPin;
+  document.getElementById('current-pin-field').hidden = !hasPin;
+  document.getElementById('home-pin-title').textContent = hasPin ? 'PIN 변경' : 'PIN 설정';
+  openHomeSettings(homePinDialog, homePinForm);
+});
+
+homePinForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const { currentPin, newPin, confirmPin } = homePinForm.elements;
+  const error = homePinForm.querySelector('.home-settings-error');
+  const savedPin = localStorage.getItem(pinKey);
+  if (savedPin !== null && currentPin.value !== savedPin) {
+    error.textContent = '현재 PIN이 맞지 않아요.';
+    currentPin.focus();
+    return;
+  }
+  if (!/^[0-9]{4}$/.test(newPin.value) || newPin.value !== confirmPin.value) {
+    error.textContent = '새 PIN 4자리와 확인 번호를 다시 확인해 주세요.';
+    confirmPin.focus();
+    return;
+  }
+  try {
+    localStorage.setItem(pinKey, newPin.value);
+    updateHomePinLabel();
+    homePinForm.reset();
+    homePinDialog.close();
+  } catch {
+    error.textContent = 'PIN을 저장할 수 없어요.';
+  }
+});
+
+document.querySelectorAll('[data-close-home-dialog]').forEach(button => {
+  button.addEventListener('click', () => button.closest('dialog').close());
+});
+pinDialog.addEventListener('close', updateHomePinLabel);
+updateHomePinLabel();
   </script>
 </body>
 </html>
