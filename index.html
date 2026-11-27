@@ -236,7 +236,24 @@ button:active,
     .pay-people { margin: 12px 0; border: 1px solid #dce6de; border-radius: 10px; }
     .pay-people label { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
     .pay-people input { width: 20px; min-height: 20px; margin: 0; accent-color: #175843; }
-    #edit-trip { margin-top: 14px; background: #ffffff14; color: white; border-color: #ffffff70; }
+    #trip-detail .hero { position: relative; }
+    #detail-title { padding-right: 46px; overflow-wrap: anywhere; }
+    #detail-meta { overflow-wrap: anywhere; }
+    #detail-dates { margin-top: 6px; }
+    #detail-dates span { display: inline-block; white-space: nowrap; }
+    .detail-options { z-index: 3; }
+    .detail-options summary { color: white; }
+    .detail-options #edit-trip { color: #173e32; }
+    .detail-options summary:hover, .detail-options summary:active { color: #173e32; }
+    .res-copy .res-copy-code { min-height: 44px; padding: 4px 10px; font-size: .85rem; }
+    .res-code-text { min-width: 0; overflow-wrap: anywhere; }
+    .required-mark {
+      color: #b42318; font-size: .8em;
+    }
+    .required-mark { margin-inline-start: 4px; }
+    label:has(> :required) > .required-mark { display: inline; }
+    label > .required-mark { display: none; }
+    legend > .required-mark { display: inline; }
     #delete-trip { margin-right: auto; color: #a92d2d; background: #fff0ee; }
     #confirm-trip-delete { color: #a92d2d; background: #fff0ee; }
     #confirm-trip-delete:disabled { opacity: .45; cursor: default; }
@@ -366,7 +383,11 @@ button:active,
   <section class="hero">
     <h1 id="detail-title"></h1>
     <p id="detail-meta"></p>
-    <button type="button" id="edit-trip">여행 정보 수정</button>
+    <p id="detail-dates" hidden></p>
+    <details class="card-menu detail-options" id="detail-options">
+      <summary aria-label="여행 옵션">⋮</summary>
+      <button type="button" id="edit-trip">여행 정보 수정</button>
+    </details>
   </section>
 
   <div class="detail-tabs" aria-label="여행 상세 메뉴">
@@ -384,11 +405,11 @@ button:active,
     <form id="trip-form">
       <h2>새 여행</h2>
 
-      <label>여행 이름
+      <label>여행 이름<span class="required-mark" aria-hidden="true">*</span>
         <input name="tripName" placeholder="나홀로 한여름의 크리스마스" required>
       </label>
 
-      <label>여행지
+      <label>여행지<span class="required-mark" aria-hidden="true">*</span>
         <select name="destination" required>
           <option value="">선택</option>
           <option value="KRW">국내</option>
@@ -405,11 +426,11 @@ button:active,
         </select>
       </label>
 
-      <label id="other-field" hidden>여행지 직접 입력
+      <label id="other-field" hidden>여행지 직접 입력<span class="required-mark" aria-hidden="true">*</span>
         <input name="otherDestination" placeholder="예: 캐나다">
       </label>
 
-      <label id="other-currency-field" hidden>현지 통화
+      <label id="other-currency-field" hidden>현지 통화<span class="required-mark" aria-hidden="true">*</span>
         <select name="otherCurrency"></select>
       </label>
 
@@ -424,8 +445,8 @@ button:active,
         <small>이름을 쉼표로 구분해요.</small>
       </label>
 
-      <label>떠나는 날 <input type="date" name="start" required></label>
-      <label>돌아오는 날 <input type="date" name="end" required></label>
+      <label>떠나는 날<span class="required-mark" aria-hidden="true">*</span> <input type="date" name="start" required></label>
+      <label>돌아오는 날<span class="required-mark" aria-hidden="true">*</span> <input type="date" name="end" required></label>
 
       <p id="trip-form-error" role="alert"></p>
       <div class="actions">
@@ -438,7 +459,7 @@ button:active,
 <dialog id="pin-dialog">
   <form id="pin-form">
     <h2 id="pin-title">숨긴 여행 잠금 해제</h2>
-    <label>PIN 4자리
+    <label>PIN 4자리<span class="required-mark" aria-hidden="true">*</span>
       <input id="pin-input" type="password" inputmode="numeric"
              pattern="[0-9]{4}" maxlength="4" required>
     </label>
@@ -596,6 +617,7 @@ list.append(card);
     start.addEventListener('change', () => { end.min = start.value; });
 
     document.getElementById('edit-trip').addEventListener('click', () => {
+      document.getElementById('detail-options').open = false;
       openTripForm(selectedTrip, true);
     });
 
@@ -820,11 +842,15 @@ function openTripDetail(trip) {
 
 function updateTripHeader(trip) {
   document.getElementById('detail-title').textContent = trip.name;
-  const dates = trip.start && trip.end
-    ? dateFormat.format(new Date(trip.start)) + ' ~ ' + dateFormat.format(new Date(trip.end))
-    : '';
   document.getElementById('detail-meta').textContent =
-    [trip.country, trip.region, trip.currency, dates].filter(Boolean).join(' · ');
+    [trip.country, trip.region, trip.currency].filter(Boolean).join(' · ');
+  const dates = document.getElementById('detail-dates');
+  dates.replaceChildren();
+  dates.hidden = !trip.start || !trip.end;
+  if (!dates.hidden) {
+    dates.append(element('span', dateFormat.format(new Date(trip.start)) + ' ~'),
+      document.createTextNode(' '), element('span', dateFormat.format(new Date(trip.end))));
+  }
 }
 
 document.getElementById('back-to-list').addEventListener('click', () => {
@@ -1375,7 +1401,7 @@ card.append(summary, form);
     }
 
     control.textContent = '복사됨';
-    setTimeout(() => { control.textContent = '번호 복사'; }, 1500);
+    setTimeout(() => { control.textContent = '복사'; }, 1500);
   }
 
   function renderCard(booking) {
@@ -1423,8 +1449,9 @@ card.append(summary, form);
 
     if (booking.code) {
       const code = element('div', '', 'res-copy');
-      const copy = button('번호 복사', () => copyCode(booking.code, copy));
-      code.append(element('span', `예약번호 ${booking.code}`), copy);
+      const copy = button('복사', () => copyCode(booking.code, copy), 'res-copy-code');
+      copy.setAttribute('aria-label', '예약번호 복사');
+      code.append(element('span', `예약번호 ${booking.code}`, 'res-code-text'), copy);
       card.append(code);
     }
 
@@ -1689,9 +1716,9 @@ function renderShopping(trip) {
       <label>구분
         <select name="kind"><option value="personal">내꺼</option><option value="gift">줄꺼</option></select>
       </label>
-      <label>무엇을 <input name="name" placeholder="예: 말차 과자" required></label>
+      <label>무엇을<span class="required-mark" aria-hidden="true">*</span> <input name="name" placeholder="예: 말차 과자" required></label>
       <label class="shopping-recipient">누구에게 <input name="recipient" placeholder="예: 엄마"></label>
-      <label>몇 개 <input name="quantity" type="number" min="1" step="1" inputmode="numeric" required></label>
+      <label>몇 개<span class="required-mark" aria-hidden="true">*</span> <input name="quantity" type="number" min="1" step="1" inputmode="numeric" required></label>
       <label>메모 <textarea name="memo" placeholder="살 곳이나 기억할 것"></textarea></label>
       <div class="actions">
         <button type="button" class="shopping-cancel">닫기</button>
@@ -1829,7 +1856,7 @@ function renderShopping(trip) {
     input.name = name;
     input.value = value || '';
     input.required = required;
-    wrapper.append(input);
+    wrapper.append(requiredMark(), input);
     return wrapper;
   }
 
@@ -1839,8 +1866,14 @@ function renderShopping(trip) {
     select.name = name;
     options.forEach(([key, text]) => select.add(new Option(text, key)));
     select.value = value ?? '';
-    wrapper.append(select);
+    wrapper.append(requiredMark(), select);
     return wrapper;
+  }
+
+  function requiredMark() {
+    const mark = element('span', '*', 'required-mark');
+    mark.setAttribute('aria-hidden', 'true');
+    return mark;
   }
 
   function currencyDecimals(code) {
@@ -1889,7 +1922,9 @@ function renderShopping(trip) {
     const selected = new Set(payment.people || ['나']);
     const members = [...new Set([...roster, ...selected, payment.payer || '나'])];
     const people = element('fieldset', '', 'pay-people');
-    people.append(element('legend', '부담할 사람'));
+    const legend = element('legend', '부담할 사람');
+    legend.append(requiredMark());
+    people.append(legend);
 
     function checkbox(caption, name, value) {
       const wrap = element('label');
