@@ -353,14 +353,8 @@ button:active,
   .expense-entry-meta dd { margin: 0; }
   .expense-booking-tag { display: inline-block; margin-top: 8px; padding: 3px 8px; border-radius: 12px; background: #e4f2e8; color: #245b40; }
   .res-pay, .pay-people { min-width: 0; min-inline-size: 0; }
-  .res-pay.res-booking-payment {
-  background: #fff3ef;
-  border-color: #f2d6cf;
-}
-.res-booking-payment legend {
-  color: #853b36;
-  font-weight: 700;
-}
+  .res-pay.res-booking-payment { background: #fff3ef; border-color: #f2d6cf; }
+  .res-booking-payment legend { color: #853b36; font-weight: 700; }
   .res-payment-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .res-payment-actions button { padding-inline: 10px; }
   .res-payment-remove { color: #a53934; background: #fff0ee; border-color: #f5c7c1; }
@@ -1286,31 +1280,57 @@ card.append(summary, form);
 
     const payments = element('div');
     const addPayment = element('div', '', 'res-payment-add');
-    const emptyAdd = button('+ 결제건 추가', () => appendPayment());
-    addPayment.append(emptyAdd, element('small', '예약금과 잔금은 따로 추가해요.'));
-
-    function updatePaymentControls() {
-      emptyAdd.hidden = payments.childElementCount > 0;
-    }
+    addPayment.append(
+      button('+ 결제건 추가', () => appendPayment()),
+      element('small', '예약금과 잔금은 따로 추가해요.')
+    );
 
     function appendPayment(payment) {
       const box = paymentField(trip, today, payment);
       box.classList.add('res-booking-payment');
+      const fields = element('div');
+      fields.append(...Array.from(box.children).slice(1));
+      const summary = element('p', '', 'res-payment-summary');
+      summary.hidden = true;
+      const status = element('p', '', 'res-error');
+      status.setAttribute('role', 'alert');
       const controls = element('div', '', 'res-payment-actions');
+      const edit = button('수정', () => {
+        fields.hidden = false;
+        summary.hidden = true;
+        edit.hidden = true;
+        savePayment.hidden = false;
+        fields.querySelector('[name="label"]').focus();
+      });
+      edit.hidden = true;
+      const savePayment = button('결제건 저장', () => {
+        status.textContent = '';
+        for (const input of fields.querySelectorAll('input, select')) {
+          if (!input.reportValidity()) return;
+        }
+        try {
+          const item = readPayment(box);
+          summary.textContent = item.label + ' · ' +
+            new Intl.NumberFormat('ko-KR', { style: 'currency', currency: item.currency }).format(item.amount);
+          fields.hidden = true;
+          summary.hidden = false;
+          savePayment.hidden = true;
+          edit.hidden = false;
+          edit.focus();
+        } catch (error) {
+          status.textContent = error.message;
+        }
+      });
       controls.append(
-        button('이 결제건 빼기', () => {
-          box.remove();
-          updatePaymentControls();
-        }, 'res-payment-remove'),
-        button('+ 결제건 추가', () => appendPayment())
+        button('이 결제건 빼기', () => box.remove(), 'res-payment-remove'),
+        savePayment,
+        edit
       );
-      box.append(controls);
+      box.append(fields, summary, status, controls);
       payments.append(box);
-      updatePaymentControls();
     }
 
     (saved.payments || []).forEach(appendPayment);
-    updatePaymentControls();
     form.append(payments, addPayment);
 
     const error = element('p', '', 'res-error');
@@ -1337,7 +1357,7 @@ card.append(summary, form);
       draw();
     }));
 
-    const save = element('button', '저장', 'primary');
+    const save = element('button', '예약 저장', 'primary');
     save.type = 'submit';
     actions.append(save);
     form.append(error, actions);
