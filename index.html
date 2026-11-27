@@ -360,6 +360,8 @@ button:active,
   .res-payment-remove { color: #a53934; background: #fff0ee; border-color: #f5c7c1; }
   .res-payment-add { margin-top: 12px; }
   .res-payment-add small { display: block; margin-top: 5px; }
+  .res-payment-actions > .res-payment-remove { margin-inline-end: auto; }
+.res-panel .actions > .res-delete { margin-inline-end: auto; }
 </style>
 </head>
 
@@ -1282,7 +1284,7 @@ card.append(summary, form);
     const addPayment = element('div', '', 'res-payment-add');
     addPayment.append(
       button('+ 결제건 추가', () => appendPayment()),
-      element('small', '예약금과 잔금은 따로 추가해요.')
+      element('small', '예약금과 잔금 등 결제건별로 각각 추가해요.')
     );
 
     function appendPayment(payment) {
@@ -1303,7 +1305,7 @@ card.append(summary, form);
         fields.querySelector('[name="label"]').focus();
       });
       edit.hidden = true;
-      const savePayment = button('결제건 저장', () => {
+      const savePayment = button('저장', () => {
         status.textContent = '';
         for (const input of fields.querySelectorAll('input, select')) {
           if (!input.reportValidity()) return;
