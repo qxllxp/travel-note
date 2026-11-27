@@ -353,7 +353,11 @@ button:active,
   .expense-entry-meta dd { margin: 0; }
   .expense-booking-tag { display: inline-block; margin-top: 8px; padding: 3px 8px; border-radius: 12px; background: #e4f2e8; color: #245b40; }
   .res-pay, .pay-people { min-width: 0; min-inline-size: 0; }
-  .res-payment-remove { display: block; margin: 0 0 0 auto; }
+  .res-pay.res-booking-payment { background: #eef6f1; border-color: #c5dbcf; }
+  .res-booking-payment legend { color: #245b40; font-weight: 700; }
+  .res-payment-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .res-payment-actions button { padding-inline: 10px; }
+  .res-payment-remove { color: #a53934; background: #fff0ee; border-color: #f5c7c1; }
   .res-payment-add { margin-top: 12px; }
   .res-payment-add small { display: block; margin-top: 5px; }
 </style>
@@ -531,7 +535,8 @@ let showHidden = false;
         form.elements.companions.value = (source.companions || []).join(', ');
         const known = [...destination.options].find(option =>
           option.value && option.value !== 'other' &&
-          option.textContent.trim() === source.country
+          (option.textContent.trim() === source.country ||
+            (option.value === 'KRW' && isDomesticTrip(source)))
         );
         destination.value = known ? known.value : 'other';
         otherDestination.value = known ? '' : source.country || '';
@@ -1274,12 +1279,32 @@ card.append(summary, form);
     );
 
     const payments = element('div');
-    (saved.payments || []).forEach(payment => payments.append(paymentField(trip, today, payment)));
     const addPayment = element('div', '', 'res-payment-add');
-    addPayment.append(
-      button('+ 결제 추가', () => payments.append(paymentField(trip, today))),
-      element('small', '예약금과 잔금은 따로 추가해요.')
-    );
+    const emptyAdd = button('+ 결제건 추가', () => appendPayment());
+    addPayment.append(emptyAdd, element('small', '예약금과 잔금은 따로 추가해요.'));
+
+    function updatePaymentControls() {
+      emptyAdd.hidden = payments.childElementCount > 0;
+    }
+
+    function appendPayment(payment) {
+      const box = paymentField(trip, today, payment);
+      box.classList.add('res-booking-payment');
+      const controls = element('div', '', 'res-payment-actions');
+      controls.append(
+        button('이 결제건 빼기', () => {
+          box.remove();
+          updatePaymentControls();
+        }, 'res-payment-remove'),
+        button('+ 결제건 추가', () => appendPayment())
+      );
+      box.append(controls);
+      payments.append(box);
+      updatePaymentControls();
+    }
+
+    (saved.payments || []).forEach(appendPayment);
+    updatePaymentControls();
     form.append(payments, addPayment);
 
     const error = element('p', '', 'res-error');
@@ -1287,7 +1312,7 @@ card.append(summary, form);
     const actions = element('div', '', 'actions');
 
     if (existing) {
-      actions.append(button('삭제', () => {
+      actions.append(button('예약 삭제', () => {
         const hasPayments = (existing.payments || []).length > 0;
         const question = hasPayments
           ? '예약과 이 예약에 저장한 결제 내역을 함께 삭제할까요?'
@@ -1907,12 +1932,7 @@ function renderShopping(trip) {
 
   function paymentField(trip, today, payment = {}, standalone = false) {
     const box = element('fieldset', '', 'res-pay');
-    if (!standalone) {
-      box.append(element('legend', '결제 내역'));
-      const remove = button('×', () => box.remove(), 'packing-remove res-payment-remove');
-      remove.setAttribute('aria-label', '결제 내역 빼기');
-      box.append(remove);
-    }
+    if (!standalone) box.append(element('legend', '결제 내역'));
 
     const amount = field('실제로 낸 금액', 'amount', payment.amount ? formatAmount(String(payment.amount)) : '', 'text', true);
     const amountInput = amount.querySelector('input');
@@ -2066,7 +2086,7 @@ function travelSettlement(records, scale, amountFor) {
 }
 
 function isDomesticTrip(trip) {
-  return ['한국', '대한민국'].includes((trip.country || '').trim());
+  return ['국내', '한국', '대한민국'].includes((trip.country || '').trim());
 }
 
 function renderExpenses(trip) {
